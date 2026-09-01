@@ -215,6 +215,10 @@ section{padding:14px 16px 0;}
           <i><span class="sw" style="background:#eef5fb; border:1px solid #d8e8f5"></span>これから追いつく</i>
           <i><span class="sw" style="background:#fff; outline:2px solid #c99be8"></span>今日</i>
         </div>
+        <div style="font-size:10px; color:var(--sub); font-weight:600; line-height:1.9; margin-top:8px; padding:0 4px">
+          マスの数字＝その日までの<b>成約の累計めやす</b>／勉強会マスの「面談◯件とる」＝<b>その会でつくる面談数の目標</b>（その時点の必達数ではありません）<br>
+          追加〆＝友だち追加の締切／<b>予約〆＝月内着金に効く面談予約の締切</b>／実施〆＝月内着金の安全圏／限界＝これ以降は入金が翌月
+        </div>
       </div>
     </section>
 
@@ -445,7 +449,7 @@ function renderCal(now,curYm,actual,reports){
   const y=now.getFullYear(), m=now.getMonth();
   const dim=new Date(y,m+1,0).getDate(), first=new Date(y,m,1).getDay();
   const total=monthTotal(curYm);
-  const {mtgD,safeD,optD}=deadlines(now);
+  const {mtgD,safeD,bookD,optD}=deadlines(now);
   const needMtg=Math.ceil(total/LT.closeRate);
   const evs=eventNeeds(now,curYm);
   const evByDay={}; evs.forEach(ev=>{ (evByDay[ev.day]=evByDay[ev.day]||[]).push(ev); });
@@ -479,13 +483,11 @@ function renderCal(now,curYm,actual,reports){
     if(d===now.getDate()) e.className+=' today';
     let flag='';
     if(d===optD) flag+='<div style="font-size:8px; font-weight:800; color:#9E77D6; line-height:1.2">追加〆</div>';
-    if(d===safeD) flag+='<div style="font-size:8px; font-weight:800; color:#5f97be; line-height:1.2">着金安全〆</div>';
-    if(d===mtgD) flag+='<div style="font-size:8px; font-weight:800; color:#c66f96; line-height:1.2">実施限界</div>';
+    if(d===bookD) flag+='<div style="font-size:8px; font-weight:800; color:#c66f96; line-height:1.2">予約〆</div>';
+    if(d===safeD) flag+='<div style="font-size:8px; font-weight:800; color:#5f97be; line-height:1.2">実施〆</div>';
+    if(d===mtgD) flag+='<div style="font-size:8px; font-weight:800; color:#9a8993; line-height:1.2">限界</div>';
     (evByDay[d]||[]).forEach(ev=>{
-      flag+=`<div class="ev" style="background:${ev.color}">${ev.short}${ev.time.slice(0,2)}時</div><div class="evn">面談${ev.need}</div>`;
-    });
-    evs.filter(ev=>ev.bookBy===d && ev.day!==d).forEach(ev=>{
-      flag+=`<div style="font-size:7.5px; font-weight:800; color:${ev.color}; line-height:1.3">${ev.short}予約〆</div>`;
+      flag+=`<div class="ev" style="background:${ev.color}">${ev.short}強会</div><div class="evn">面談${ev.need}件とる</div>`;
     });
     e.innerHTML=`<div class="n">${d}</div><div class="t">${cumT}</div>${flag}`;
     g.appendChild(e);
