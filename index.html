@@ -230,6 +230,11 @@ section{padding:14px 16px 0;}
     </section>
 
     <section>
+      <div class="sec-h"><span class="tag">ROAS</span><b>広告の費用対効果</b><small>目標500%</small></div>
+      <div class="card" style="padding:14px 16px" id="roasBox"></div>
+    </section>
+
+    <section>
       <div class="sec-h"><span class="tag">QUARTER</span><b>Q全体（9〜11月）</b></div>
       <div class="card q">
         <div class="in">
@@ -356,13 +361,14 @@ async function loadAll(){
   renderCal(now,curYm,monthActual[curYm]||0,reports);
   renderEvents(now,curYm);
   renderChannels(curYm,deals);
+  renderRoas(curYm,deals);
   renderQuarter(q3,monthActual,curYm);
   renderClosers(stats.filter(r=>r.ym===curYm));
   const d=new Date();
   document.getElementById('heroDate').textContent=`${d.getMonth()+1}月${d.getDate()}日（${'日月火水木金土'[d.getDay()]}）`;
 }
 
-function monthTotal(m){ const t=targets[m]||{}; return Object.values(t).reduce((a,b)=>a+b,0); }
+function monthTotal(m){ const t=targets[m]||{}; return Object.entries(t).filter(([k])=>!k.startsWith('AD_')).reduce((a,[,v])=>a+v,0); }
 
 function renderMain(now,curYm,actual){
   const total=monthTotal(curYm);
@@ -521,7 +527,7 @@ function renderChannels(curYm,deals){
     actual[key]=(actual[key]||0)+1;
   });
   const g=document.getElementById('chGrid'); g.innerHTML='';
-  const order=Object.entries(t).sort((a,b)=>b[1]-a[1]);
+  const order=Object.entries(t).filter(([k])=>!k.startsWith('AD_')).sort((a,b)=>b[1]-a[1]);
   order.forEach(([ch,tv])=>{
     const av=actual[ch];
     const div=document.createElement('div'); div.className='card ch';
@@ -533,6 +539,30 @@ function renderChannels(curYm,deals){
     g.appendChild(div);
   });
   document.getElementById('chNote').textContent='実績はダッシュボードの面談報告（即決・入金完了）を数えています。抜けがあれば面談報告の入力をお願いします';
+}
+
+function renderRoas(curYm,deals){
+  const t=targets[curYm]||{};
+  const adCost=t['AD_COST']||0;
+  const adPrice=((targets['2026-ALL']||{})['AD_PRICE'])||0;
+  const adDeals=deals.filter(dl=>['即決','入金完了','分割支払い中'].includes(dl.status||'') && String(dl.alliance||'').includes('広告')).length;
+  const box=document.getElementById('roasBox');
+  if(!adCost||!adPrice){
+    box.innerHTML=`<div style="font-size:12px; color:var(--sub); font-weight:600">今月の広告費が未設定です。setup.htmlのSQLでAD_COSTを実額に更新すると自動計算されます</div>`;
+    return;
+  }
+  const rev=adDeals*adPrice;
+  const roas=Math.round(rev/adCost*100);
+  const col= roas>=500?'var(--pinkd)': roas>=200?'#5f97be':'var(--sub)';
+  box.innerHTML=`
+    <div style="display:flex; align-items:baseline; gap:10px">
+      <b style="font-size:30px; color:${col}">${adDeals? roas.toLocaleString()+'%':'—'}</b>
+      <span style="font-size:11px; color:var(--sub); font-weight:700">目標 500%</span>
+    </div>
+    <div style="font-size:11.5px; color:var(--plum2); font-weight:700; margin-top:4px">
+      広告経由の成約 ${adDeals}件 × 受注単価 ＝ ${(rev/10000).toLocaleString()}万円 ／ 広告費 ${(adCost/10000).toLocaleString()}万円
+    </div>
+    <div style="font-size:10px; color:var(--sub); font-weight:600; margin-top:3px">受注ベース・面談報告（クローザーボード）の広告成約から自動集計。広告費は月初に実額へ更新</div>`;
 }
 
 function renderQuarter(q3,monthActual,curYm){

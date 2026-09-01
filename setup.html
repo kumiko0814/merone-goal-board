@@ -55,7 +55,10 @@ INSERT INTO gb_targets (ym,channel,target) VALUES
  ('2026-11','SHE',5),('2026-11','ABCash',15),('2026-11','Famm',15),
  ('2026-11','BUCKET LIST',15),('2026-11','広告',20),('2026-11','YouTube',5),
  ('2026-11','インタレストマッチ',15),
- ('2026-Q3','CHA',350),('2026-Q3','COM',267)
+ ('2026-Q3','CHA',350),('2026-Q3','COM',267),
+ -- ROAS計算用（AD_COST=その月の広告費[円]・毎月実額に書き換えて再RUN / AD_PRICE=受注単価[円]）
+ ('2026-09','AD_COST',50000),('2026-10','AD_COST',50000),('2026-11','AD_COST',50000),
+ ('2026-ALL','AD_PRICE',540000)
 ON CONFLICT (ym,channel) DO UPDATE SET target=EXCLUDED.target;
 </textarea>
     <button onclick="navigator.clipboard.writeText(document.getElementById('sql').value).then(()=>this.textContent='コピーしました')">SQLをコピー</button>
