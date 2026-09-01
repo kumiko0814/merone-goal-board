@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>目標ボード｜Merone</title>
+<style>
+:root{
+  --bg:#fdeef3; --bg2:#faf1f6; --pinkbg:#fbe7ef; --paper:#ffffff;
+  --plum:#574a58; --plum2:#463a48; --pink:#f0a2c5; --pinkd:#c66f96;
+  --blue:#8fbfe6; --blued:#5f97be; --ink:#4f454e; --sub:#9a8993; --line:#f3e3ec;
+  --grad:linear-gradient(135deg,#F5A6C8,#B98BEA);
+  --grad-lav:linear-gradient(150deg,#C99BE8,#9E77D6);
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent; margin:0; padding:0;}
+html{-webkit-text-size-adjust:100%;}
+body{
+  background:linear-gradient(180deg,#fdf1f4 0%,#fbe9ee 55%,#f3f0f7 100%);
+  color:var(--ink); line-height:1.8; letter-spacing:.01em;
+  font-family:"Yu Gothic","YuGothic","游ゴシック","Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP",sans-serif;
+  display:flex; justify-content:center; overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;}
+img{max-width:100%; height:auto;}
+.app{width:100%; max-width:480px; min-height:100vh; padding-bottom:70px; position:relative;}
+
+.hud{display:flex; align-items:center; gap:10px; padding:12px 16px; background:var(--paper);
+  border-bottom:1px solid var(--line); position:sticky; top:0; z-index:20;
+  box-shadow:0 6px 18px -14px rgba(87,74,88,.35);}
+.hud img{width:86px; display:block;}
+.hud .ttl{font-size:12.5px; font-weight:800; color:var(--plum2); letter-spacing:.06em;}
+.hud .who{margin-left:auto; font-size:10.5px; font-weight:800; color:#fff; background:var(--grad);
+  border-radius:999px; padding:5px 12px; letter-spacing:.03em;}
+
+.card{background:var(--paper); border:1px solid var(--line); border-radius:20px;
+  box-shadow:0 12px 28px -18px rgba(87,74,88,.35);}
+section{padding:14px 16px 0;}
+.sec-h{display:flex; align-items:center; gap:8px; margin:4px 2px 8px;}
+.sec-h .tag{font-size:10px; font-weight:800; letter-spacing:.14em; color:#fff; background:var(--grad-lav);
+  border-radius:999px; padding:3px 12px;}
+.sec-h b{font-size:14px; color:var(--plum2); letter-spacing:.03em;}
+.sec-h small{font-size:10px; color:var(--sub); font-weight:600; margin-left:auto;}
+
+/* hero */
+.hero{padding:16px 16px 0;}
+.hero .in{padding:16px; display:flex; gap:12px; align-items:center;}
+.hero .ava{flex:none; width:60px; height:60px; border-radius:999px; overflow:hidden;
+  border:3px solid #fff; box-shadow:0 6px 16px rgba(198,111,150,.28); background:#fff;}
+.hero .ava img{width:100%; height:100%; object-fit:cover;}
+.hero p{font-size:12.5px; color:var(--plum2); font-weight:700;}
+.hero small{font-size:10.5px; color:var(--sub); font-weight:600;}
+
+/* main number */
+.main .in{padding:20px 18px 18px; text-align:center;}
+.main .label{font-size:11px; font-weight:800; letter-spacing:.2em; color:var(--pinkd);}
+.main .big{font-size:52px; font-weight:800; color:var(--plum2); line-height:1.15; letter-spacing:.02em;}
+.main .big small{font-size:20px; color:var(--sub); font-weight:800;}
+.main .bar{height:14px; border-radius:20px; background:#f6e7ef; overflow:hidden; margin:12px 4px 8px;}
+.main .fill{height:100%; width:0%; background:linear-gradient(90deg,var(--blue),var(--pink)); border-radius:20px; transition:width .5s;}
+.main .pace{font-size:12.5px; color:var(--plum2); font-weight:700;}
+.main .pace b{color:var(--pinkd); font-size:15px;}
+.main .cheer{margin-top:8px; font-size:11.5px; color:var(--sub); font-weight:600;}
+
+/* calendar */
+.cal{padding:14px 12px 12px;}
+.cal .grid{display:grid; grid-template-columns:repeat(7,1fr); gap:4px;}
+.cal .dow{font-size:9.5px; font-weight:800; color:var(--sub); text-align:center; padding:2px 0;}
+.cal .d{border:1px solid var(--line); border-radius:10px; min-height:46px; padding:3px 2px 2px; text-align:center; background:#fffdfd; position:relative;}
+.cal .d.blank{border:none; background:transparent;}
+.cal .d .n{font-size:11px; font-weight:800; color:var(--plum2); line-height:1.3;}
+.cal .d .t{font-size:9px; color:var(--sub); font-weight:700; line-height:1.3;}
+.cal .d.ok{background:var(--pinkbg); border-color:#f2cede;}
+.cal .d.ok .t{color:var(--pinkd);}
+.cal .d.soon{background:#eef5fb; border-color:#d8e8f5;}
+.cal .d.today{outline:2.5px solid; outline-color:#c99be8; outline-offset:1px;}
+.cal .legend{display:flex; gap:10px; justify-content:center; margin-top:8px; font-size:9.5px; color:var(--sub); font-weight:700;}
+.cal .legend i{font-style:normal; display:inline-flex; align-items:center; gap:4px;}
+.cal .legend .sw{width:10px; height:10px; border-radius:3px; display:inline-block;}
+
+/* channels */
+.chs{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+.ch{padding:11px 12px; }
+.ch .nm{font-size:11px; font-weight:800; color:var(--plum2);}
+.ch .num{font-size:19px; font-weight:800; color:var(--plum2); margin-top:2px;}
+.ch .num small{font-size:11px; color:var(--sub);}
+.ch .mini{height:6px; border-radius:20px; background:#f6e7ef; overflow:hidden; margin-top:6px;}
+.ch .mini i{display:block; height:100%; background:var(--grad); border-radius:20px;}
+.ch .nt{font-size:9px; color:var(--sub); margin-top:4px; font-weight:600;}
+
+/* quarter */
+.q .in{padding:16px;}
+.q .row{display:flex; align-items:baseline; gap:8px;}
+.q .row b{font-size:24px; color:var(--plum2);}
+.q .row span{font-size:11px; color:var(--sub); font-weight:700;}
+.q .bar{height:12px; border-radius:20px; background:#f6e7ef; overflow:hidden; margin-top:8px; position:relative;}
+.q .bar i{position:absolute; top:0; bottom:0; border-radius:20px;}
+.q .marker{position:absolute; top:-3px; bottom:-3px; width:2px; background:#c99be8;}
+.q .months{display:flex; gap:6px; margin-top:10px;}
+.q .m{flex:1; text-align:center; background:var(--bg2); border:1px solid var(--line); border-radius:12px; padding:7px 4px;}
+.q .m b{display:block; font-size:13px; color:var(--plum2);}
+.q .m span{font-size:9.5px; color:var(--sub); font-weight:700;}
+
+/* closers */
+.chips{display:flex; flex-wrap:wrap; gap:6px;}
+.chips i{font-style:normal; font-size:11px; font-weight:700; color:var(--plum);
+  background:var(--paper); border:1px solid var(--line); border-radius:999px; padding:5px 12px;}
+.chips i b{color:var(--pinkd);}
+
+/* footer chara */
+.foot{text-align:center; padding:26px 16px 10px;}
+.foot img{height:130px; width:auto;}
+.foot p{font-size:12px; color:var(--plum2); font-weight:700; margin-top:6px;}
+.foot small{display:block; font-size:10px; color:var(--sub); margin-top:4px; font-weight:600;}
+
+/* login */
+.login{padding:30px 16px;}
+.login .in{padding:24px 18px; text-align:center;}
+.login h2{font-size:15px; color:var(--plum2); margin-bottom:6px;}
+.login p{font-size:11.5px; color:var(--sub); margin-bottom:12px;}
+.login input{width:100%; border:1.5px solid var(--line); background:#fffdfd; border-radius:13px;
+  padding:12px 13px; font-size:15px; color:var(--ink); font-family:inherit; margin-bottom:10px;}
+.login input:focus{outline:none; border-color:var(--pink); box-shadow:0 0 0 3px rgba(240,162,197,.18);}
+.btn{display:block; width:100%; border:none; cursor:pointer; padding:14px; border-radius:14px;
+  font-size:14px; font-weight:800; font-family:inherit; letter-spacing:.05em;
+  background:var(--grad); color:#fff; box-shadow:0 10px 24px rgba(185,139,234,.35);}
+.btn:active{transform:translateY(1px);}
+.hint{font-size:10.5px; color:var(--sub); margin-top:10px; line-height:1.9;}
+
+/* misc */
+.note{font-size:10.5px; color:var(--sub); margin:8px 4px 0; font-weight:600;}
+#bugL{position:fixed; right:10px; bottom:10px; font-size:10px; color:var(--sub); background:rgba(255,255,255,.9);
+  border:1px solid var(--line); border-radius:999px; padding:5px 11px; cursor:pointer; z-index:30; font-weight:700;}
+#bugM{display:none; position:fixed; inset:0; background:rgba(70,58,72,.45); z-index:40; align-items:center; justify-content:center; padding:20px;}
+#bugM.on{display:flex;}
+#bugM .box{background:#fff; border-radius:18px; padding:18px; width:100%; max-width:400px;}
+#bugM textarea{width:100%; min-height:90px; border:1.5px solid var(--line); border-radius:12px; padding:10px; font-size:14px; font-family:inherit; margin:10px 0;}
+#bugM .row{display:flex; gap:8px;}
+#bugM .row button{flex:1; padding:11px; border-radius:12px; border:none; font-family:inherit; font-weight:800; cursor:pointer;}
+#bugM .cancel{background:var(--bg2); color:var(--plum);}
+#bugM .send{background:var(--grad); color:#fff;}
+.skel{color:var(--sub); font-size:12px; text-align:center; padding:30px 0;}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="hud">
+    <img src="reche-logo-transparent.png" alt="Re:che">
+    <span class="ttl">目標ボード</span>
+    <span class="who" id="who">…</span>
+  </div>
+
+  <div id="loginView" style="display:none">
+    <div class="login">
+      <div class="card in">
+        <h2>メールでログイン</h2>
+        <p>クローザーボードと同じメールアドレスでOKです</p>
+        <input id="email" type="email" placeholder="you@merone.co.jp" autocomplete="email">
+        <button class="btn" onclick="doLogin()">ログインリンクを送る</button>
+        <div class="hint" id="loginHint">届いたメールのリンクを開くと、この画面に戻ります</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="boardView" style="display:none">
+
+    <div class="hero">
+      <div class="card in">
+        <div class="ava"><img src="kumiko-head-avatar.png" alt=""></div>
+        <div>
+          <p id="heroMsg">今日はここだけ見れば大丈夫◎</p>
+          <small id="heroDate"></small>
+        </div>
+      </div>
+    </div>
+
+    <section>
+      <div class="sec-h"><span class="tag">GOAL</span><b>今月の成約</b><small id="mainSrc">セールスシートから自動集計</small></div>
+      <div class="card main">
+        <div class="in">
+          <div class="label" id="mLabel">9月の目標</div>
+          <div class="big"><span id="mNow">–</span><small> / <span id="mTarget">–</span>件</small></div>
+          <div class="bar"><div class="fill" id="mFill"></div></div>
+          <div class="pace" id="mPace">読み込み中…</div>
+          <div class="cheer" id="mCheer"></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="sec-h"><span class="tag">CALENDAR</span><b>いつまでに何件？</b><small>数字は「その日までの目安」</small></div>
+      <div class="card cal">
+        <div class="grid" id="calGrid"></div>
+        <div class="legend">
+          <i><span class="sw" style="background:#fbe7ef; border:1px solid #f2cede"></span>目安クリア</i>
+          <i><span class="sw" style="background:#eef5fb; border:1px solid #d8e8f5"></span>これから追いつく</i>
+          <i><span class="sw" style="background:#fff; outline:2px solid #c99be8"></span>今日</i>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="sec-h"><span class="tag">CHANNEL</span><b>どこから何件？</b><small id="chSrc"></small></div>
+      <div class="chs" id="chGrid"></div>
+      <div class="note" id="chNote"></div>
+    </section>
+
+    <section>
+      <div class="sec-h"><span class="tag">QUARTER</span><b>Q全体（9〜11月）</b></div>
+      <div class="card q">
+        <div class="in">
+          <div class="row"><b id="qNow">–</b><span id="qLbl">/ 267件（COM）・挑戦目標 350件（CHA）</span></div>
+          <div class="bar" id="qBar"><i id="qFill" style="left:0; width:0%; background:linear-gradient(90deg,#8fbfe6,#f0a2c5)"></i><div class="marker" id="qMarker"></div></div>
+          <div class="months" id="qMonths"></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="sec-h"><span class="tag">TEAM</span><b>今月のクローザー</b></div>
+      <div class="chips" id="closerChips"><span class="skel">読み込み中…</span></div>
+    </section>
+
+    <div class="foot">
+      <img src="kumiko-pink-peace.png" alt="">
+      <p id="footMsg">数字は毎時、自動でここに集まります</p>
+      <small>見に来ない日があっても大丈夫。異常があるときだけお知らせします</small>
+    </div>
+  </div>
+
+  <div id="setupView" style="display:none">
+    <div class="login"><div class="card in">
+      <h2>目標データが未設定です</h2>
+      <p>setup.html のSQLをSupabaseで1回実行すると、目標が表示されます</p>
+      <a class="btn" href="setup.html" style="text-decoration:none">セットアップ手順を開く</a>
+    </div></div>
+  </div>
+
+  <span id="bugL" onclick="document.getElementById('bugM').classList.add('on')">🍺 不具合を報告</span>
+  <div id="bugM"><div class="box">
+    <b style="color:var(--plum2); font-size:13.5px">不具合・気づいたことを教えてください</b>
+    <textarea id="bugT" placeholder="例）カレンダーの数字がずれている"></textarea>
+    <div class="row">
+      <button class="cancel" onclick="document.getElementById('bugM').classList.remove('on')">閉じる</button>
+      <button class="send" onclick="sendBug()">送信</button>
+    </div>
+  </div></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SB_URL='https://inrvprlyobghviklulcv.supabase.co';
+const SB_KEY='sb_publishable_ZrCNcsRHMci-l7Fns8QtIA_X22XZGJp';
+const sb=supabase.createClient(SB_URL,SB_KEY);
+
+const CH_ALIAS={'famm':'Famm','abcash':'ABCash','she':'SHE','スマセル':'スマセル','広告':'広告','youtube':'YouTube','bucket list':'BUCKET LIST','バケットリスト':'BUCKET LIST','インタレストマッチ':'インタレストマッチ','シェアフル':'シェアフル'};
+const AUTO_CH=new Set(['Famm','ABCash','SHE','スマセル','シェアフル']); // sc_dealsから実績が取れるチャネル
+
+let targets={}, qTargets={}, session=null, currentEmail='';
+
+function ym(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function today(){ return new Date(); }
+
+init();
+async function init(){
+  const {data:{session:s}}=await sb.auth.getSession();
+  session=s;
+  if(!s){ document.getElementById('loginView').style.display='block'; document.getElementById('who').textContent='未ログイン'; return; }
+  currentEmail=s.user.email||'';
+  document.getElementById('who').textContent=currentEmail.split('@')[0];
+  await loadAll();
+}
+async function doLogin(){
+  const email=document.getElementById('email').value.trim();
+  if(!email) return;
+  const {error}=await sb.auth.signInWithOtp({email, options:{emailRedirectTo:location.href.split('#')[0]}});
+  document.getElementById('loginHint').textContent=error?('送信できませんでした: '+error.message):'メールを送りました。届いたリンクを開いてください（数分かかることがあります）';
+}
+sb.auth.onAuthStateChange((_e,s)=>{ if(s&&!session){ location.reload(); } });
+
+async function loadAll(){
+  const now=today(), curYm=ym(now);
+  // 目標
+  const {data:tg,error:tgErr}=await sb.from('gb_targets').select('*');
+  if(tgErr||!tg||!tg.length){ document.getElementById('setupView').style.display='block'; return; }
+  tg.forEach(r=>{
+    if(r.ym.includes('Q')) qTargets[r.channel]=r.target;
+    else{ targets[r.ym]=targets[r.ym]||{}; targets[r.ym][r.channel]=r.target; }
+  });
+  document.getElementById('boardView').style.display='block';
+
+  // 実績（3系統・取れたものだけ使う）
+  const q3=['2026-09','2026-10','2026-11'];
+  const [ms,rp,dl]=await Promise.all([
+    sb.from('sc_month_stats').select('ym,closer_id,closed').in('ym',q3),
+    sb.from('sc_reports').select('report_date,closed,instant_close').gte('report_date',curYm+'-01'),
+    sb.from('sc_deals').select('alliance,status,deal_date,updated_at').gte('deal_date',curYm+'-01')
+  ]);
+  const stats=ms.data||[], reports=rp.data||[], deals=dl.data||[];
+
+  const monthActual={}; q3.forEach(m=>monthActual[m]=0);
+  stats.forEach(r=>{ monthActual[r.ym]=(monthActual[r.ym]||0)+(r.closed||0); });
+
+  renderMain(now,curYm,monthActual[curYm]||0);
+  renderCal(now,curYm,monthActual[curYm]||0,reports);
+  renderChannels(curYm,deals);
+  renderQuarter(q3,monthActual,curYm);
+  renderClosers(stats.filter(r=>r.ym===curYm));
+  const d=new Date();
+  document.getElementById('heroDate').textContent=`${d.getMonth()+1}月${d.getDate()}日（${'日月火水木金土'[d.getDay()]}）`;
+}
+
+function monthTotal(m){ const t=targets[m]||{}; return Object.values(t).reduce((a,b)=>a+b,0); }
+
+function renderMain(now,curYm,actual){
+  const total=monthTotal(curYm);
+  const dim=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+  const day=now.getDate(), remain=dim-day+1;
+  const left=Math.max(0,total-actual);
+  const perDay=remain>0?(left/remain):left;
+  const rate=total?Math.round(actual/total*100):0;
+  document.getElementById('mLabel').textContent=`${parseInt(curYm.slice(5))}月の目標｜達成率 ${rate}%`;
+  document.getElementById('mNow').textContent=actual;
+  document.getElementById('mTarget').textContent=total;
+  document.getElementById('mFill').style.width=Math.min(100,total?actual/total*100:0)+'%';
+  const paceEl=document.getElementById('mPace'), cheer=document.getElementById('mCheer');
+  if(left===0){
+    paceEl.innerHTML='今月の目標、達成です';
+    cheer.textContent='おつかれさまでした。ここからは全部が上積みです✨';
+  }else{
+    paceEl.innerHTML=`あと <b>${left}件</b>｜残り${remain}日 → 1日 <b>${perDay.toFixed(1)}件</b> ペース`;
+    const idealCum=Math.round(total*day/dim);
+    cheer.textContent = actual>=idealCum ? 'いいペースです。この調子でいきましょう✨' : `今日の目安まであと${idealCum-actual}件。今日の1件が月末を軽くします`;
+  }
+}
+
+function renderCal(now,curYm,actual,reports){
+  const y=now.getFullYear(), m=now.getMonth();
+  const dim=new Date(y,m+1,0).getDate(), first=new Date(y,m,1).getDay();
+  const total=monthTotal(curYm);
+  // 日別実績（sc_reportsの成約+即決）→累積
+  const daily={};
+  reports.forEach(r=>{ const d=parseInt((r.report_date||'').slice(8)); if(d) daily[d]=(daily[d]||0)+(r.closed||0)+(r.instant_close||0); });
+  let cum=0; const cumActual={};
+  for(let d=1; d<=dim; d++){ cum+=(daily[d]||0); cumActual[d]=cum; }
+  const reportsTotal=cum;
+  const g=document.getElementById('calGrid');
+  g.innerHTML='';
+  '日月火水木金土'.split('').forEach(w=>{ const e=document.createElement('div'); e.className='dow'; e.textContent=w; g.appendChild(e); });
+  for(let i=0;i<first;i++){ const e=document.createElement('div'); e.className='d blank'; g.appendChild(e); }
+  for(let d=1;d<=dim;d++){
+    const e=document.createElement('div'); e.className='d';
+    const cumT=Math.round(total*d/dim);
+    // 日別実績が未入力の月は、月間実績を「今日時点まで一律達成扱い」にせず目安のみ表示
+    const haveDaily=reportsTotal>0;
+    if(d<now.getDate() || (d===now.getDate()&&haveDaily)){
+      const a=haveDaily?cumActual[d]:actual;
+      e.className+= a>=cumT?' ok':' soon';
+    }
+    if(d===now.getDate()) e.className+=' today';
+    e.innerHTML=`<div class="n">${d}</div><div class="t">${cumT}</div>`;
+    g.appendChild(e);
+  }
+}
+
+function renderChannels(curYm,deals){
+  const t=targets[curYm]||{};
+  const actual={};
+  deals.forEach(dl=>{
+    if(!['即決','入金完了'].includes(dl.status||'')) return;
+    const key=CH_ALIAS[(dl.alliance||'').toLowerCase()]||CH_ALIAS[dl.alliance]||dl.alliance||'その他';
+    actual[key]=(actual[key]||0)+1;
+  });
+  const g=document.getElementById('chGrid'); g.innerHTML='';
+  const order=Object.entries(t).sort((a,b)=>b[1]-a[1]);
+  order.forEach(([ch,tv])=>{
+    const av=actual[ch];
+    const div=document.createElement('div'); div.className='card ch';
+    const hasAuto=AUTO_CH.has(ch);
+    div.innerHTML=`<div class="nm">${ch}</div>
+      <div class="num">${hasAuto?(av||0):'–'}<small> / ${tv}件</small></div>
+      <div class="mini"><i style="width:${hasAuto?Math.min(100,(av||0)/tv*100):0}%"></i></div>
+      <div class="nt">${hasAuto?'面談報告から自動':'自動集計はこれから'}</div>`;
+    g.appendChild(div);
+  });
+  document.getElementById('chNote').textContent='実績はダッシュボードの面談報告（即決・入金完了）を数えています。抜けがあれば面談報告の入力をお願いします';
+}
+
+function renderQuarter(q3,monthActual,curYm){
+  const com=qTargets['COM']||267, cha=qTargets['CHA']||350;
+  const sum=q3.reduce((a,m)=>a+(monthActual[m]||0),0);
+  document.getElementById('qNow').textContent=sum+'件';
+  document.getElementById('qLbl').textContent=`/ ${com}件（COM）・挑戦目標 ${cha}件（CHA）`;
+  document.getElementById('qFill').style.width=Math.min(100,sum/cha*100)+'%';
+  document.getElementById('qMarker').style.left=(com/cha*100)+'%';
+  const wrap=document.getElementById('qMonths'); wrap.innerHTML='';
+  q3.forEach(m=>{
+    const mt=monthTotal(m), a=monthActual[m]||0;
+    const el=document.createElement('div'); el.className='m';
+    const mr=mt?Math.round(a/mt*100):0;
+    el.innerHTML=`<b>${a} / ${mt}</b><span>${parseInt(m.slice(5))}月 ${mr}%${m===curYm?'・今月':''}</span>`;
+    wrap.appendChild(el);
+  });
+}
+
+async function renderClosers(rows){
+  const wrap=document.getElementById('closerChips');
+  if(!rows.length){ wrap.innerHTML='<span class="skel">今月の同期データ待ちです（毎時自動更新）</span>'; return; }
+  let names={};
+  try{ const {data}=await sb.from('sc_closers').select('id,name'); (data||[]).forEach(c=>names[c.id]=c.name); }catch(e){}
+  wrap.innerHTML='';
+  rows.sort((a,b)=>(b.closed||0)-(a.closed||0)).forEach(r=>{
+    if(!(r.closed>0)) return;
+    const el=document.createElement('i');
+    el.innerHTML=`${(names[r.closer_id]||r.closer_id)} <b>${r.closed}</b>`;
+    wrap.appendChild(el);
+  });
+  if(!wrap.children.length) wrap.innerHTML='<span class="skel">今月の成約はこれからです。最初の1件を待っています</span>';
+}
+
+async function sendBug(){
+  const t=document.getElementById('bugT').value.trim();
+  if(!t) return;
+  try{
+    await fetch(SB_URL+'/rest/v1/ailab_notes',{method:'POST',
+      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify({member_id:'bug_merone-goal-board', member_name:'目標ボード｜'+(currentEmail||'guest'),
+        mood:'バグ報告', worry:t, want:location.href+' | '+navigator.userAgent})});
+    document.getElementById('bugT').value='';
+    document.getElementById('bugM').classList.remove('on');
+    alert('送信しました。ありがとうございます');
+  }catch(e){ alert('送信に失敗しました: '+e.message); }
+}
+</script>
+</body>
+</html>

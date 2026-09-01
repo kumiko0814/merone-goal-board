@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>セットアップ｜目標ボード</title>
+<style>
+body{font-family:"Yu Gothic","YuGothic","游ゴシック","Hiragino Sans",sans-serif;
+  background:linear-gradient(180deg,#fdf1f4,#f3f0f7); color:#4f454e; line-height:1.9;
+  display:flex; justify-content:center; padding:20px 14px 60px;}
+.wrap{width:100%; max-width:560px;}
+h1{font-size:17px; color:#463a48; margin:10px 0 4px;}
+p{font-size:13px; margin:8px 0;}
+.card{background:#fff; border:1px solid #f3e3ec; border-radius:16px; padding:16px; margin:14px 0;
+  box-shadow:0 12px 28px -18px rgba(87,74,88,.35);}
+.step{font-size:11px; font-weight:800; color:#fff; background:linear-gradient(135deg,#F5A6C8,#B98BEA);
+  border-radius:999px; padding:3px 12px; display:inline-block;}
+textarea{width:100%; min-height:260px; border:1.5px solid #f3e3ec; border-radius:12px; padding:12px;
+  font-size:12px; font-family:Menlo,Consolas,monospace; margin-top:8px; color:#4f454e;}
+button{border:none; cursor:pointer; padding:12px 20px; border-radius:12px; font-size:13.5px; font-weight:800;
+  font-family:inherit; background:linear-gradient(135deg,#F5A6C8,#B98BEA); color:#fff; margin-top:8px;}
+a{color:#c66f96;}
+code{background:#fbe7ef; border-radius:6px; padding:1px 6px; font-size:12px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>目標ボード セットアップ（1回だけ・3分）</h1>
+  <p>目標数値（OKRのKR3）は公開ページに直書きせず、ログインした人だけが読めるデータベースに入れます。</p>
+
+  <div class="card">
+    <span class="step">STEP 1</span>
+    <p><a href="https://supabase.com/dashboard/project/inrvprlyobghviklulcv/sql/new" target="_blank">Supabase SQL Editor</a> を開いて、下のSQLを貼り付けて <b>RUN</b> を押す</p>
+    <textarea id="sql" readonly>
+CREATE TABLE IF NOT EXISTS gb_targets (
+  ym TEXT NOT NULL,
+  channel TEXT NOT NULL,
+  target INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (ym, channel)
+);
+ALTER TABLE gb_targets ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "gb_targets_read" ON gb_targets;
+CREATE POLICY "gb_targets_read" ON gb_targets
+  FOR SELECT TO authenticated USING (true);
+GRANT SELECT ON gb_targets TO authenticated;
+
+INSERT INTO gb_targets (ym,channel,target) VALUES
+ ('2026-09','SHE',15),('2026-09','ABCash',15),('2026-09','Famm',15),
+ ('2026-09','BUCKET LIST',12),('2026-09','広告',10),('2026-09','YouTube',2),
+ ('2026-09','インタレストマッチ',8),
+ ('2026-10','SHE',5),('2026-10','ABCash',15),('2026-10','Famm',15),
+ ('2026-10','シェアフル',20),('2026-10','BUCKET LIST',15),('2026-10','広告',15),
+ ('2026-10','YouTube',5),('2026-10','インタレストマッチ',10),
+ ('2026-11','SHE',5),('2026-11','ABCash',15),('2026-11','Famm',15),
+ ('2026-11','BUCKET LIST',15),('2026-11','広告',20),('2026-11','YouTube',5),
+ ('2026-11','インタレストマッチ',15),
+ ('2026-Q3','CHA',350),('2026-Q3','COM',267)
+ON CONFLICT (ym,channel) DO UPDATE SET target=EXCLUDED.target;
+</textarea>
+    <button onclick="navigator.clipboard.writeText(document.getElementById('sql').value).then(()=>this.textContent='コピーしました')">SQLをコピー</button>
+  </div>
+
+  <div class="card">
+    <span class="step">STEP 2</span>
+    <p><a href="index.html">目標ボードを開く</a>。クローザーボードにログイン済みのブラウザなら、そのまま表示されます（同じログインを共用）。</p>
+    <p>未ログインの場合はメールアドレスを入れてログインリンクを受け取ってください。もしリンクを開いてもログインできない場合は、Supabaseの <code>Authentication → URL Configuration → Redirect URLs</code> に <code>https://kumiko0814.github.io/merone-goal-board/</code> を追加してください。</p>
+  </div>
+
+  <div class="card">
+    <span class="step">メモ</span>
+    <p>・月の合計は自動計算です（9月77件・10月100件・11月90件、Q合計COM267/CHA350）</p>
+    <p>・目標を変えたいときはSTEP1のSQLの数字を変えてもう一度RUNすれば上書きされます</p>
+    <p>・成約の実績は毎時、セールス個人成果シートから自動で入ります。チャネル別の実績は面談報告（クローザーボード）から数えています</p>
+  </div>
+</div>
+</body>
+</html>
