@@ -62,17 +62,22 @@ section{padding:14px 16px 0;}
 .main .cheer{margin-top:8px; font-size:11.5px; color:var(--sub); font-weight:600;}
 
 /* calendar */
-.cal{padding:14px 12px 12px;}
-.cal .grid{display:grid; grid-template-columns:repeat(7,1fr); gap:4px;}
+.cal{padding:14px 8px 12px;}
+.cal .grid{display:grid; grid-template-columns:repeat(7,1fr); gap:3px;}
 .cal .dow{font-size:9.5px; font-weight:800; color:var(--sub); text-align:center; padding:2px 0;}
-.cal .d{border:1px solid var(--line); border-radius:10px; min-height:46px; padding:3px 2px 2px; text-align:center; background:#fffdfd; position:relative;}
+.cal .d{border:1px solid var(--line); border-radius:9px; min-height:66px; padding:3px 1px 2px; text-align:center; background:#fffdfd; position:relative; overflow:hidden;}
 .cal .d.blank{border:none; background:transparent;}
-.cal .d .n{font-size:11px; font-weight:800; color:var(--plum2); line-height:1.3;}
-.cal .d .t{font-size:9px; color:var(--sub); font-weight:700; line-height:1.3;}
+.cal .d .n{font-size:10.5px; font-weight:800; color:var(--plum2); line-height:1.25;}
+.cal .d .t{font-size:8.5px; color:var(--sub); font-weight:700; line-height:1.25;}
 .cal .d.ok{background:var(--pinkbg); border-color:#f2cede;}
 .cal .d.ok .t{color:var(--pinkd);}
 .cal .d.soon{background:#eef5fb; border-color:#d8e8f5;}
 .cal .d.today{outline:2.5px solid; outline-color:#c99be8; outline-offset:1px;}
+.cal .wk{grid-column:1 / -1; background:#fdf5dc; border:1px solid #f3e6bd; border-radius:9px;
+  padding:4px 8px; font-size:10px; font-weight:800; color:#7a6a3a; text-align:left; line-height:1.6;}
+.cal .wk b{color:#a05c78;}
+.cal .ev{font-size:7.5px; font-weight:800; color:#fff; border-radius:5px; padding:1px 2px; line-height:1.4; margin:1px auto 0; max-width:95%;}
+.cal .evn{font-size:8px; font-weight:800; color:var(--pinkd); line-height:1.3;}
 .cal .legend{display:flex; gap:10px; justify-content:center; margin-top:8px; font-size:9.5px; color:var(--sub); font-weight:700;}
 .cal .legend i{font-style:normal; display:inline-flex; align-items:center; gap:4px;}
 .cal .legend .sw{width:10px; height:10px; border-radius:3px; display:inline-block;}
@@ -399,10 +404,32 @@ function renderReverse(now,curYm,actualMeet){
   const perDay=mtgLeft>0?(mtgLeftCnt/mtgLeft).toFixed(1):mtgLeftCnt;
   document.getElementById('rvMtg').textContent=`成約${total}件には面談 約${needMtg}件（成約率55%実測）。実施済み${actualMeet}件・あと${mtgLeftCnt}件 → 1日${perDay}件ペース`;
 }
+// 勉強会ごとの必要面談数（カレンダーとカードで共用）
+function eventNeeds(now,curYm){
+  const t=targets[curYm]||{}, {mtgD}=deadlines(now);
+  const byCh={};
+  EVENTS.filter(ev=>ev.d.startsWith(curYm)).forEach(ev=>{ (byCh[ev.ch]=byCh[ev.ch]||[]).push(ev); });
+  const out=[];
+  Object.entries(byCh).forEach(([ch,evs])=>{
+    const goal=t[ch]||0; if(!goal) return;
+    const rate=CLOSE_RATE[ch]||LT.closeRate;
+    const needTotal=Math.ceil(goal/rate);
+    evs.sort((a,b)=>a.d.localeCompare(b.d)).forEach(ev=>{
+      const day=parseInt(ev.d.slice(8));
+      out.push({...ev, day, need:Math.ceil(needTotal/evs.length), goal, rate, count:evs.length, win:mtgD-day});
+    });
+  });
+  return out;
+}
+
 function renderCal(now,curYm,actual,reports){
   const y=now.getFullYear(), m=now.getMonth();
   const dim=new Date(y,m+1,0).getDate(), first=new Date(y,m,1).getDay();
   const total=monthTotal(curYm);
+  const {mtgD,optD}=deadlines(now);
+  const needMtg=Math.ceil(total/LT.closeRate);
+  const evs=eventNeeds(now,curYm);
+  const evByDay={}; evs.forEach(ev=>{ (evByDay[ev.day]=evByDay[ev.day]||[]).push(ev); });
   // 日別実績（sc_reportsの成約+即決）→累積
   const daily={};
   reports.forEach(r=>{ const d=parseInt((r.report_date||'').slice(8)); if(d) daily[d]=(daily[d]||0)+(r.closed||0)+(r.instant_close||0); });
@@ -412,27 +439,34 @@ function renderCal(now,curYm,actual,reports){
   const g=document.getElementById('calGrid');
   g.innerHTML='';
   '日月火水木金土'.split('').forEach(w=>{ const e=document.createElement('div'); e.className='dow'; e.textContent=w; g.appendChild(e); });
+  const weekBar=(satDay)=>{
+    const end=Math.min(satDay,dim);
+    const cumC=Math.round(total*end/dim);
+    const cumM=Math.round(needMtg*Math.min(end,mtgD)/mtgD);
+    const e=document.createElement('div'); e.className='wk';
+    e.innerHTML=`〜${m+1}/${end}までの目標　成約 <b>${cumC}件</b> ／ 面談 <b>${cumM}件</b>`;
+    g.appendChild(e);
+  };
   for(let i=0;i<first;i++){ const e=document.createElement('div'); e.className='d blank'; g.appendChild(e); }
   for(let d=1;d<=dim;d++){
+    const dow=(first+d-1)%7;
     const e=document.createElement('div'); e.className='d';
     const cumT=Math.round(total*d/dim);
-    // 日別実績が未入力の月は、月間実績を「今日時点まで一律達成扱い」にせず目安のみ表示
     const haveDaily=reportsTotal>0;
     if(d<now.getDate() || (d===now.getDate()&&haveDaily)){
       const a=haveDaily?cumActual[d]:actual;
       e.className+= a>=cumT?' ok':' soon';
     }
     if(d===now.getDate()) e.className+=' today';
-    const {mtgD,optD}=deadlines(now);
     let flag='';
-    if(d===optD) flag='<div style="font-size:8px; font-weight:800; color:#9E77D6; line-height:1.2">追加〆</div>';
-    if(d===mtgD) flag='<div style="font-size:8px; font-weight:800; color:#c66f96; line-height:1.2">面談〆</div>';
-    const ds=curYm+'-'+String(d).padStart(2,'0');
-    EVENTS.filter(ev=>ev.d===ds).forEach(ev=>{
-      flag+=`<div style="font-size:8px; font-weight:800; color:#fff; background:${ev.color}; border-radius:6px; padding:0 3px; line-height:1.5; margin-top:1px">${ev.short}</div>`;
+    if(d===optD) flag+='<div style="font-size:8px; font-weight:800; color:#9E77D6; line-height:1.2">追加〆</div>';
+    if(d===mtgD) flag+='<div style="font-size:8px; font-weight:800; color:#c66f96; line-height:1.2">面談〆</div>';
+    (evByDay[d]||[]).forEach(ev=>{
+      flag+=`<div class="ev" style="background:${ev.color}">${ev.short}${ev.time.slice(0,2)}時</div><div class="evn">面談${ev.need}</div>`;
     });
     e.innerHTML=`<div class="n">${d}</div><div class="t">${cumT}</div>${flag}`;
     g.appendChild(e);
+    if(dow===6 || d===dim) weekBar(d);  // 土曜（または月末）の後に週目標バー
   }
 }
 
@@ -451,20 +485,10 @@ function renderEvents(now,curYm){
       <div style="font-size:10.5px; color:var(--sub); font-weight:600; margin-top:3px">${note}</div>`;
     wrap.appendChild(el);
   };
-  // 勉強会があるチャネル: 月目標をイベント数で按分
-  const byCh={};
-  EVENTS.filter(ev=>ev.d.startsWith(curYm)).forEach(ev=>{ (byCh[ev.ch]=byCh[ev.ch]||[]).push(ev); });
-  Object.entries(byCh).forEach(([ch,evs])=>{
-    const goal=t[ch]||0; if(!goal) return;
-    const rate=CLOSE_RATE[ch]||LT.closeRate;
-    const needTotal=Math.ceil(goal/rate);
-    evs.sort((a,b)=>a.d.localeCompare(b.d)).forEach((ev,i)=>{
-      const need=Math.ceil(needTotal/evs.length);
-      const day=parseInt(ev.d.slice(8));
-      const win=mtgD-day;
-      const warn= win<=5 ? `面談期間が${win}日しかありません。当日〜翌日中に予約を入れきるのが勝負です` : `面談は ${m}/${day+1}〜${m}/${mtgD} の${win}日間で`;
-      add(`${m}/${day} ${ch}勉強会`, ev.time+'〜', `${need}件`, warn+`（成約目標${goal}件÷成約率${Math.round(rate*100)}%${evs.length>1?'を'+evs.length+'回で按分':''}）`);
-    });
+  // 勉強会があるチャネル: 月目標をイベント数で按分（eventNeedsと共用）
+  eventNeeds(now,curYm).forEach(ev=>{
+    const warn= ev.win<=5 ? `面談期間が${ev.win}日しかありません。当日〜翌日中に予約を入れきるのが勝負です` : `面談は ${m}/${ev.day+1}〜${m}/${mtgD} の${ev.win}日間で`;
+    add(`${m}/${ev.day} ${ev.ch}勉強会`, ev.time+'〜', `${ev.need}件`, warn+`（成約目標${ev.goal}件÷成約率${Math.round(ev.rate*100)}%${ev.count>1?'を'+ev.count+'回で按分':''}）`);
   });
   // 常時導線
   const alGoal=ALWAYS_ON.reduce((a,ch)=>a+(t[ch]||0),0);
