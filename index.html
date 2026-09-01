@@ -284,8 +284,8 @@ async function init(){
 async function doLogin(){
   const email=document.getElementById('email').value.trim();
   if(!email) return;
-  const {error}=await sb.auth.signInWithOtp({email, options:{emailRedirectTo:location.href.split('#')[0]}});
-  document.getElementById('loginHint').textContent=error?('送信できませんでした: '+error.message):'メールを送りました。届いたリンクを開いてください（数分かかることがあります）';
+  const {error}=await sb.auth.signInWithOtp({email, options:{emailRedirectTo:'https://kumiko0814.github.io/sales-closer-board/'}});
+  document.getElementById('loginHint').textContent=error?('送信できませんでした: '+error.message):'メールを送りました。届いたリンクを開くとクローザーボードが表示されるので、そのあと目標ボードを開き直してください。ログイン済みになっています';
 }
 if(sb) sb.auth.onAuthStateChange((ev,s)=>{ if(ev==='SIGNED_IN' && booted && s && !session){ location.reload(); } });
 
