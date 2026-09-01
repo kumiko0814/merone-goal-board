@@ -187,6 +187,21 @@ section{padding:14px 16px 0;}
     </section>
 
     <section>
+      <div class="sec-h"><span class="tag">DEADLINE</span><b>逆算ライン</b><small>実測LT中央値から逆算</small></div>
+      <div class="card" style="padding:14px 16px">
+        <div style="display:flex; align-items:center; justify-content:center; gap:6px; flex-wrap:wrap; font-size:11px; font-weight:800; color:var(--plum2)">
+          <span style="background:var(--bg2); border:1px solid var(--line); border-radius:999px; padding:4px 10px">友だち追加</span>
+          <span style="color:var(--sub)">→12日→</span>
+          <span style="background:var(--bg2); border:1px solid var(--line); border-radius:999px; padding:4px 10px">面談</span>
+          <span style="color:var(--sub)">→1日→</span>
+          <span style="background:var(--grad); color:#fff; border-radius:999px; padding:4px 10px">入金</span>
+        </div>
+        <div id="rvLines" style="margin-top:10px; font-size:12.5px; color:var(--plum2); font-weight:700; text-align:center; line-height:2"></div>
+        <div id="rvMtg" style="margin-top:6px; font-size:11px; color:var(--sub); font-weight:600; text-align:center"></div>
+      </div>
+    </section>
+
+    <section>
       <div class="sec-h"><span class="tag">CALENDAR</span><b>いつまでに何件？</b><small>数字は「その日までの目安」</small></div>
       <div class="card cal">
         <div class="grid" id="calGrid"></div>
@@ -262,6 +277,9 @@ try{ sb=supabase.createClient(SB_URL,SB_KEY); }
 catch(e){ showFatal('通信ライブラリを読み込めませんでした。Safari や Chrome で開き直してみてください'); }
 
 const CH_ALIAS={'famm':'Famm','abcash':'ABCash','she':'SHE','スマセル':'スマセル','広告':'広告','youtube':'YouTube','bucket list':'BUCKET LIST','バケットリスト':'BUCKET LIST','インタレストマッチ':'インタレストマッチ','シェアフル':'シェアフル'};
+// 実測LT（プロラインダッシュボード 2026年面談スコープ・中央値・スマセル/Li-Li除外）
+// 面談LT=友だち追加→面談実施12日(n=471) / 入金LT=面談実施→初回入金1日(n=332) / 成約率=面談実施→成約 約55%(ABCash/famm/SHE実測加重)
+const LT={optToMtg:12, mtgToPay:1, closeRate:0.55};
 const AUTO_CH=new Set(['Famm','ABCash','SHE','スマセル','シェアフル']); // sc_dealsから実績が取れるチャネル
 
 let targets={}, qTargets={}, session=null, currentEmail='', booted=false;
@@ -303,16 +321,17 @@ async function loadAll(){
   // 実績（3系統・取れたものだけ使う）
   const q3=['2026-09','2026-10','2026-11'];
   const [ms,rp,dl]=await Promise.all([
-    sb.from('sc_month_stats').select('ym,closer_id,closed').in('ym',q3),
+    sb.from('sc_month_stats').select('ym,closer_id,closed,meetings').in('ym',q3),
     sb.from('sc_reports').select('report_date,closed,instant_close').gte('report_date',curYm+'-01'),
     sb.from('sc_deals').select('alliance,status,deal_date,updated_at').gte('deal_date',curYm+'-01')
   ]);
   const stats=ms.data||[], reports=rp.data||[], deals=dl.data||[];
 
-  const monthActual={}; q3.forEach(m=>monthActual[m]=0);
-  stats.forEach(r=>{ monthActual[r.ym]=(monthActual[r.ym]||0)+(r.closed||0); });
+  const monthActual={}, monthMeet={}; q3.forEach(m=>{monthActual[m]=0; monthMeet[m]=0;});
+  stats.forEach(r=>{ monthActual[r.ym]=(monthActual[r.ym]||0)+(r.closed||0); monthMeet[r.ym]=(monthMeet[r.ym]||0)+(r.meetings||0); });
 
   renderMain(now,curYm,monthActual[curYm]||0);
+  renderReverse(now,curYm,monthMeet[curYm]||0);
   renderCal(now,curYm,monthActual[curYm]||0,reports);
   renderChannels(curYm,deals);
   renderQuarter(q3,monthActual,curYm);
@@ -345,6 +364,25 @@ function renderMain(now,curYm,actual){
   }
 }
 
+function deadlines(now){
+  const dim=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+  const mtgD=dim-LT.mtgToPay, optD=Math.max(1,mtgD-LT.optToMtg);
+  return {dim,mtgD,optD};
+}
+function renderReverse(now,curYm,actualMeet){
+  const total=monthTotal(curYm), m=parseInt(curYm.slice(5));
+  const {mtgD,optD}=deadlines(now);
+  const needMtg=Math.ceil(total/LT.closeRate);
+  const day=now.getDate();
+  const lines=[];
+  const optLeft=optD-day, mtgLeft=mtgD-day;
+  lines.push(`友だち追加は <b style="color:var(--pinkd)">${m}/${optD}まで</b>${optLeft>=0?`（あと${optLeft}日）`:'（今月分は締切済み→来月分の仕込みへ）'}`);
+  lines.push(`面談は <b style="color:var(--pinkd)">${m}/${mtgD}まで</b>${mtgLeft>=0?`（あと${mtgLeft}日）`:'（今月分は締切済み）'}`);
+  document.getElementById('rvLines').innerHTML=lines.join('<br>');
+  const mtgLeftCnt=Math.max(0,needMtg-actualMeet);
+  const perDay=mtgLeft>0?(mtgLeftCnt/mtgLeft).toFixed(1):mtgLeftCnt;
+  document.getElementById('rvMtg').textContent=`成約${total}件には面談 約${needMtg}件（成約率55%実測）。実施済み${actualMeet}件・あと${mtgLeftCnt}件 → 1日${perDay}件ペース`;
+}
 function renderCal(now,curYm,actual,reports){
   const y=now.getFullYear(), m=now.getMonth();
   const dim=new Date(y,m+1,0).getDate(), first=new Date(y,m,1).getDay();
@@ -369,7 +407,11 @@ function renderCal(now,curYm,actual,reports){
       e.className+= a>=cumT?' ok':' soon';
     }
     if(d===now.getDate()) e.className+=' today';
-    e.innerHTML=`<div class="n">${d}</div><div class="t">${cumT}</div>`;
+    const {mtgD,optD}=deadlines(now);
+    let flag='';
+    if(d===optD) flag='<div style="font-size:8px; font-weight:800; color:#9E77D6; line-height:1.2">追加〆</div>';
+    if(d===mtgD) flag='<div style="font-size:8px; font-weight:800; color:#c66f96; line-height:1.2">面談〆</div>';
+    e.innerHTML=`<div class="n">${d}</div><div class="t">${cumT}</div>${flag}`;
     g.appendChild(e);
   }
 }
