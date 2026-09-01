@@ -214,6 +214,11 @@ section{padding:14px 16px 0;}
     </section>
 
     <section>
+      <div class="sec-h"><span class="tag">EVENT</span><b>勉強会から逆算</b><small>各会で面談を何件つくるか</small></div>
+      <div id="evList"></div>
+    </section>
+
+    <section>
       <div class="sec-h"><span class="tag">CHANNEL</span><b>どこから何件？</b><small id="chSrc"></small></div>
       <div class="chs" id="chGrid"></div>
       <div class="note" id="chNote"></div>
@@ -280,6 +285,16 @@ const CH_ALIAS={'famm':'Famm','abcash':'ABCash','she':'SHE','スマセル':'ス�
 // 実測LT（プロラインダッシュボード 2026年面談スコープ・中央値・スマセル/Li-Li除外）
 // 面談LT=友だち追加→面談実施12日(n=471) / 入金LT=面談実施→初回入金1日(n=332) / 成約率=面談実施→成約 約55%(ABCash/famm/SHE実測加重)
 const LT={optToMtg:12, mtgToPay:1, closeRate:0.55};
+// チャネル別の実測成約率（面談→成約）
+const CLOSE_RATE={'ABCash':0.60,'Famm':0.48,'SHE':0.56};
+// 勉強会日程（開催告知済みの公開情報のみ。日時が決まったらここに追記）
+const EVENTS=[
+  {d:'2026-09-13',time:'21:00',ch:'ABCash',short:'ABC勉',color:'#8fbfe6'},
+  {d:'2026-09-25',time:'21:00',ch:'ABCash',short:'ABC勉',color:'#8fbfe6'},
+  {d:'2026-09-15',time:'20:00',ch:'SHE',short:'SHE勉',color:'#B98BEA'}
+];
+const ALWAYS_ON=['広告','YouTube','インタレストマッチ']; // 常時導線
+const NO_DATE_YET=['Famm','BUCKET LIST']; // 勉強会日程が未確定のチャネル（9月時点）
 const AUTO_CH=new Set(['Famm','ABCash','SHE','スマセル','シェアフル']); // sc_dealsから実績が取れるチャネル
 
 let targets={}, qTargets={}, session=null, currentEmail='', booted=false;
@@ -333,6 +348,7 @@ async function loadAll(){
   renderMain(now,curYm,monthActual[curYm]||0);
   renderReverse(now,curYm,monthMeet[curYm]||0);
   renderCal(now,curYm,monthActual[curYm]||0,reports);
+  renderEvents(now,curYm);
   renderChannels(curYm,deals);
   renderQuarter(q3,monthActual,curYm);
   renderClosers(stats.filter(r=>r.ym===curYm));
@@ -411,9 +427,54 @@ function renderCal(now,curYm,actual,reports){
     let flag='';
     if(d===optD) flag='<div style="font-size:8px; font-weight:800; color:#9E77D6; line-height:1.2">追加〆</div>';
     if(d===mtgD) flag='<div style="font-size:8px; font-weight:800; color:#c66f96; line-height:1.2">面談〆</div>';
+    const ds=curYm+'-'+String(d).padStart(2,'0');
+    EVENTS.filter(ev=>ev.d===ds).forEach(ev=>{
+      flag+=`<div style="font-size:8px; font-weight:800; color:#fff; background:${ev.color}; border-radius:6px; padding:0 3px; line-height:1.5; margin-top:1px">${ev.short}</div>`;
+    });
     e.innerHTML=`<div class="n">${d}</div><div class="t">${cumT}</div>${flag}`;
     g.appendChild(e);
   }
+}
+
+function renderEvents(now,curYm){
+  const t=targets[curYm]||{};
+  const {mtgD}=deadlines(now);
+  const m=parseInt(curYm.slice(5));
+  const wrap=document.getElementById('evList'); wrap.innerHTML='';
+  const add=(title,sub,need,note)=>{
+    const el=document.createElement('div'); el.className='card';
+    el.style.cssText='padding:12px 14px; margin-bottom:8px;';
+    el.innerHTML=`<div style="display:flex; align-items:baseline; gap:8px;">
+      <b style="font-size:12.5px; color:var(--plum2)">${title}</b>
+      <span style="font-size:10px; color:var(--sub); font-weight:700">${sub}</span>
+      <span style="margin-left:auto; font-size:13px; font-weight:800; color:var(--pinkd); white-space:nowrap">面談 ${need}</span></div>
+      <div style="font-size:10.5px; color:var(--sub); font-weight:600; margin-top:3px">${note}</div>`;
+    wrap.appendChild(el);
+  };
+  // 勉強会があるチャネル: 月目標をイベント数で按分
+  const byCh={};
+  EVENTS.filter(ev=>ev.d.startsWith(curYm)).forEach(ev=>{ (byCh[ev.ch]=byCh[ev.ch]||[]).push(ev); });
+  Object.entries(byCh).forEach(([ch,evs])=>{
+    const goal=t[ch]||0; if(!goal) return;
+    const rate=CLOSE_RATE[ch]||LT.closeRate;
+    const needTotal=Math.ceil(goal/rate);
+    evs.sort((a,b)=>a.d.localeCompare(b.d)).forEach((ev,i)=>{
+      const need=Math.ceil(needTotal/evs.length);
+      const day=parseInt(ev.d.slice(8));
+      const win=mtgD-day;
+      const warn= win<=5 ? `面談期間が${win}日しかありません。当日〜翌日中に予約を入れきるのが勝負です` : `面談は ${m}/${day+1}〜${m}/${mtgD} の${win}日間で`;
+      add(`${m}/${day} ${ch}勉強会`, ev.time+'〜', `${need}件`, warn+`（成約目標${goal}件÷成約率${Math.round(rate*100)}%${evs.length>1?'を'+evs.length+'回で按分':''}）`);
+    });
+  });
+  // 常時導線
+  const alGoal=ALWAYS_ON.reduce((a,ch)=>a+(t[ch]||0),0);
+  if(alGoal) add('広告・YouTube・インタレストマッチ','常時',`${Math.ceil(alGoal/LT.closeRate)}件`,`成約目標${alGoal}件÷55%。月内ペースで平準化・面談は${m}/${mtgD}まで`);
+  // 日程未確定
+  NO_DATE_YET.forEach(ch=>{
+    const goal=t[ch]||0; if(!goal) return;
+    const rate=CLOSE_RATE[ch]||LT.closeRate;
+    add(`${ch}`,'勉強会日程 未確定',`${Math.ceil(goal/rate)}件`,`日程が決まったら教えてください。カレンダーと逆算に自動反映します`);
+  });
 }
 
 function renderChannels(curYm,deals){
