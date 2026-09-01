@@ -289,7 +289,8 @@ catch(e){ showFatal('通信ライブラリを読み込めませんでした。Sa
 const CH_ALIAS={'famm':'Famm','abcash':'ABCash','she':'SHE','スマセル':'スマセル','広告':'広告','youtube':'YouTube','bucket list':'BUCKET LIST','バケットリスト':'BUCKET LIST','インタレストマッチ':'インタレストマッチ','シェアフル':'シェアフル'};
 // 実測LT（プロラインダッシュボード 2026年面談スコープ・中央値・スマセル/Li-Li除外）
 // 面談LT=友だち追加→面談実施12日(n=471) / 入金LT=面談実施→初回入金1日(n=332) / 成約率=面談実施→成約 約55%(ABCash/famm/SHE実測加重)
-const LT={optToMtg:12, mtgToPay:1, closeRate:0.55};
+// optToMtg=友だち追加→面談実施12日 / evToBook=勉強会→予約創出ピーク4日(6月実測) / mtgToPay=面談→入金 中央値1日・平均2.9日→安全マージン3日
+const LT={optToMtg:12, mtgToPay:1, payBuffer:3, evToBook:4, closeRate:0.55};
 // チャネル別の実測成約率（面談→成約）
 const CLOSE_RATE={'ABCash':0.60,'Famm':0.48,'SHE':0.56};
 // 勉強会日程（開催告知済みの公開情報のみ。日時が決まったらここに追記）
@@ -387,22 +388,26 @@ function renderMain(now,curYm,actual){
 
 function deadlines(now){
   const dim=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
-  const mtgD=dim-LT.mtgToPay, optD=Math.max(1,mtgD-LT.optToMtg);
-  return {dim,mtgD,optD};
+  const mtgD=dim-LT.mtgToPay;            // 実施の限界（中央値1日で月内入金ぎりぎり）
+  const safeD=dim-LT.payBuffer;          // 実施の安全圏（平均2.9日を吸収。これ以降は入金が翌月にずれ得る）
+  const optD=Math.max(1,mtgD-LT.optToMtg);
+  return {dim,mtgD,safeD,optD};
 }
 function renderReverse(now,curYm,actualMeet){
   const total=monthTotal(curYm), m=parseInt(curYm.slice(5));
-  const {mtgD,optD}=deadlines(now);
+  const {mtgD,safeD,optD}=deadlines(now);
   const needMtg=Math.ceil(total/LT.closeRate);
   const day=now.getDate();
   const lines=[];
-  const optLeft=optD-day, mtgLeft=mtgD-day;
+  const optLeft=optD-day, safeLeft=safeD-day;
   lines.push(`友だち追加は <b style="color:var(--pinkd)">${m}/${optD}まで</b>${optLeft>=0?`（あと${optLeft}日）`:'（今月分は締切済み→来月分の仕込みへ）'}`);
-  lines.push(`面談は <b style="color:var(--pinkd)">${m}/${mtgD}まで</b>${mtgLeft>=0?`（あと${mtgLeft}日）`:'（今月分は締切済み）'}`);
+  lines.push(`面談実施は <b style="color:var(--pinkd)">${m}/${safeD}までが安全圏</b>${safeLeft>=0?`（あと${safeLeft}日）`:'（安全圏は終了）'}`);
+  lines.push(`<span style="font-size:11px; color:var(--sub)">${m}/${safeD+1}〜${mtgD}の実施は入金が翌月にずれる可能性（面談→入金 中央値1日・平均2.9日）</span>`);
   document.getElementById('rvLines').innerHTML=lines.join('<br>');
   const mtgLeftCnt=Math.max(0,needMtg-actualMeet);
-  const perDay=mtgLeft>0?(mtgLeftCnt/mtgLeft).toFixed(1):mtgLeftCnt;
-  document.getElementById('rvMtg').textContent=`成約${total}件には面談 約${needMtg}件（成約率55%実測）。実施済み${actualMeet}件・あと${mtgLeftCnt}件 → 1日${perDay}件ペース`;
+  const safeDays=Math.max(0,safeD-day);
+  const perDay=safeDays>0?(mtgLeftCnt/safeDays).toFixed(1):mtgLeftCnt;
+  document.getElementById('rvMtg').textContent=`成約${total}件には面談 約${needMtg}件（成約率55%実測）。実施済み${actualMeet}件・あと${mtgLeftCnt}件 → 安全圏内なら1日${perDay}件ペース`;
 }
 // 勉強会ごとの必要面談数（カレンダーとカードで共用）
 function eventNeeds(now,curYm){
@@ -416,7 +421,7 @@ function eventNeeds(now,curYm){
     const needTotal=Math.ceil(goal/rate);
     evs.sort((a,b)=>a.d.localeCompare(b.d)).forEach(ev=>{
       const day=parseInt(ev.d.slice(8));
-      out.push({...ev, day, need:Math.ceil(needTotal/evs.length), goal, rate, count:evs.length, win:mtgD-day});
+      out.push({...ev, day, need:Math.ceil(needTotal/evs.length), goal, rate, count:evs.length, win:mtgD-day, bookBy:Math.min(day+LT.evToBook,mtgD)});
     });
   });
   return out;
@@ -426,7 +431,7 @@ function renderCal(now,curYm,actual,reports){
   const y=now.getFullYear(), m=now.getMonth();
   const dim=new Date(y,m+1,0).getDate(), first=new Date(y,m,1).getDay();
   const total=monthTotal(curYm);
-  const {mtgD,optD}=deadlines(now);
+  const {mtgD,safeD,optD}=deadlines(now);
   const needMtg=Math.ceil(total/LT.closeRate);
   const evs=eventNeeds(now,curYm);
   const evByDay={}; evs.forEach(ev=>{ (evByDay[ev.day]=evByDay[ev.day]||[]).push(ev); });
@@ -460,9 +465,13 @@ function renderCal(now,curYm,actual,reports){
     if(d===now.getDate()) e.className+=' today';
     let flag='';
     if(d===optD) flag+='<div style="font-size:8px; font-weight:800; color:#9E77D6; line-height:1.2">追加〆</div>';
-    if(d===mtgD) flag+='<div style="font-size:8px; font-weight:800; color:#c66f96; line-height:1.2">面談〆</div>';
+    if(d===safeD) flag+='<div style="font-size:8px; font-weight:800; color:#5f97be; line-height:1.2">着金安全〆</div>';
+    if(d===mtgD) flag+='<div style="font-size:8px; font-weight:800; color:#c66f96; line-height:1.2">実施限界</div>';
     (evByDay[d]||[]).forEach(ev=>{
       flag+=`<div class="ev" style="background:${ev.color}">${ev.short}${ev.time.slice(0,2)}時</div><div class="evn">面談${ev.need}</div>`;
+    });
+    evs.filter(ev=>ev.bookBy===d && ev.day!==d).forEach(ev=>{
+      flag+=`<div style="font-size:7.5px; font-weight:800; color:${ev.color}; line-height:1.3">${ev.short}予約〆</div>`;
     });
     e.innerHTML=`<div class="n">${d}</div><div class="t">${cumT}</div>${flag}`;
     g.appendChild(e);
@@ -486,9 +495,11 @@ function renderEvents(now,curYm){
     wrap.appendChild(el);
   };
   // 勉強会があるチャネル: 月目標をイベント数で按分（eventNeedsと共用）
+  const {safeD}=deadlines(now);
   eventNeeds(now,curYm).forEach(ev=>{
-    const warn= ev.win<=5 ? `面談期間が${ev.win}日しかありません。当日〜翌日中に予約を入れきるのが勝負です` : `面談は ${m}/${ev.day+1}〜${m}/${mtgD} の${ev.win}日間で`;
-    add(`${m}/${ev.day} ${ev.ch}勉強会`, ev.time+'〜', `${ev.need}件`, warn+`（成約目標${ev.goal}件÷成約率${Math.round(ev.rate*100)}%${ev.count>1?'を'+ev.count+'回で按分':''}）`);
+    const late= ev.day>safeD-2 ? `。<b style="color:var(--pinkd)">この会の入金は翌月にずれる分が出る前提</b>で月内目標と分けて数える` : '';
+    const note=`予約創出は <b>${m}/${ev.bookBy}まで</b>（開催+${LT.evToBook}日が実測ピーク）→ 実施は ${m}/${Math.min(ev.day+1,mtgD)}〜${m}/${safeD} が安全圏・${m}/${mtgD}が限界${late}（成約目標${ev.goal}件÷成約率${Math.round(ev.rate*100)}%${ev.count>1?'を'+ev.count+'回で按分':''}）`;
+    add(`${m}/${ev.day} ${ev.ch}勉強会`, ev.time+'〜', `${ev.need}件`, note);
   });
   // 常時導線
   const alGoal=ALWAYS_ON.reduce((a,ch)=>a+(t[ch]||0),0);
