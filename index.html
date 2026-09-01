@@ -294,8 +294,10 @@ catch(e){ showFatal('通信ライブラリを読み込めませんでした。Sa
 const CH_ALIAS={'famm':'Famm','abcash':'ABCash','she':'SHE','スマセル':'スマセル','広告':'広告','youtube':'YouTube','bucket list':'BUCKET LIST','バケットリスト':'BUCKET LIST','インタレストマッチ':'インタレストマッチ','シェアフル':'シェアフル'};
 // 実測LT（プロラインダッシュボード 2026年面談スコープ・中央値・スマセル/Li-Li除外）
 // 面談LT=友だち追加→面談実施12日(n=471) / 入金LT=面談実施→初回入金1日(n=332) / 成約率=面談実施→成約 約55%(ABCash/famm/SHE実測加重)
-// optToMtg=友だち追加→面談実施12日 / evToBook=勉強会→予約創出ピーク4日(6月実測) / mtgToPay=面談→入金 中央値1日・平均2.9日→安全マージン3日
-const LT={optToMtg:12, mtgToPay:1, payBuffer:3, evToBook:4, closeRate:0.55};
+// 全て実測値（2026年6〜8月・Slack予約通知222件＋成約者264名の入金日から算出）
+// optToMtg=友だち追加→面談実施12日(中央値) / evToBook=勉強会後に予約が入り続く実測窓8日(初動3日で約6割・7〜9日目まで継続)
+// bookToMtg=予約→面談実施6日(中央値) / mtgToPay=面談→入金 中央値0〜1日・月末3日以内の面談は31%が翌月着金→payBuffer3日
+const LT={optToMtg:12, mtgToPay:1, payBuffer:3, evToBook:8, bookToMtg:6, closeRate:0.55};
 // チャネル別の実測成約率（面談→成約）
 const CLOSE_RATE={'ABCash':0.60,'Famm':0.48,'SHE':0.56};
 // 勉強会日程（開催告知済みの公開情報のみ。日時が決まったらここに追記）
@@ -395,9 +397,10 @@ function renderMain(now,curYm,actual){
 function deadlines(now){
   const dim=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
   const mtgD=dim-LT.mtgToPay;            // 実施の限界（中央値1日で月内入金ぎりぎり）
-  const safeD=dim-LT.payBuffer;          // 実施の安全圏（平均2.9日を吸収。これ以降は入金が翌月にずれ得る）
+  const safeD=dim-LT.payBuffer;          // 実施の安全圏（月末3日以内の面談は31%が翌月着金＝実測）
+  const bookD=safeD-LT.bookToMtg;        // 月内着金に効く予約のライン（予約→実施 中央値6日）
   const optD=Math.max(1,mtgD-LT.optToMtg);
-  return {dim,mtgD,safeD,optD};
+  return {dim,mtgD,safeD,bookD,optD};
 }
 function renderReverse(now,curYm,actualMeet){
   const total=monthTotal(curYm), m=parseInt(curYm.slice(5));
@@ -406,9 +409,11 @@ function renderReverse(now,curYm,actualMeet){
   const day=now.getDate();
   const lines=[];
   const optLeft=optD-day, safeLeft=safeD-day;
+  const {bookD}=deadlines(now);
   lines.push(`友だち追加は <b style="color:var(--pinkd)">${m}/${optD}まで</b>${optLeft>=0?`（あと${optLeft}日）`:'（今月分は締切済み→来月分の仕込みへ）'}`);
+  lines.push(`面談予約は <b style="color:var(--pinkd)">${m}/${bookD}まで</b>が月内着金圏（予約→実施 中央値6日）`);
   lines.push(`面談実施は <b style="color:var(--pinkd)">${m}/${safeD}までが安全圏</b>${safeLeft>=0?`（あと${safeLeft}日）`:'（安全圏は終了）'}`);
-  lines.push(`<span style="font-size:11px; color:var(--sub)">${m}/${safeD+1}〜${mtgD}の実施は入金が翌月にずれる可能性（面談→入金 中央値1日・平均2.9日）</span>`);
+  lines.push(`<span style="font-size:11px; color:var(--sub)">月末3日以内の実施は31%が翌月着金（実測）。${m}/${safeD+1}〜${mtgD}は要注意</span>`);
   document.getElementById('rvLines').innerHTML=lines.join('<br>');
   const mtgLeftCnt=Math.max(0,needMtg-actualMeet);
   const safeDays=Math.max(0,safeD-day);
@@ -427,7 +432,10 @@ function eventNeeds(now,curYm){
     const needTotal=Math.ceil(goal/rate);
     evs.sort((a,b)=>a.d.localeCompare(b.d)).forEach(ev=>{
       const day=parseInt(ev.d.slice(8));
-      out.push({...ev, day, need:Math.ceil(needTotal/evs.length), goal, rate, count:evs.length, win:mtgD-day, bookBy:Math.min(day+LT.evToBook,mtgD)});
+      const {bookD}=deadlines(now);
+      out.push({...ev, day, need:Math.ceil(needTotal/evs.length), goal, rate, count:evs.length, win:mtgD-day,
+        bookWin:day+LT.evToBook,                       // 実測: 予約が入り続く窓の終わり
+        bookBy:Math.min(day+LT.evToBook,bookD)});      // 月内着金に効く予約ライン
     });
   });
   return out;
@@ -501,10 +509,11 @@ function renderEvents(now,curYm){
     wrap.appendChild(el);
   };
   // 勉強会があるチャネル: 月目標をイベント数で按分（eventNeedsと共用）
-  const {safeD}=deadlines(now);
+  const {safeD,bookD}=deadlines(now);
   eventNeeds(now,curYm).forEach(ev=>{
-    const late= ev.day>safeD-2 ? `。<b style="color:var(--pinkd)">この会の入金は翌月にずれる分が出る前提</b>で月内目標と分けて数える` : '';
-    const note=`予約創出は <b>${m}/${ev.bookBy}まで</b>（開催+${LT.evToBook}日が実測ピーク）→ 実施は ${m}/${Math.min(ev.day+1,mtgD)}〜${m}/${safeD} が安全圏・${m}/${mtgD}が限界${late}（成約目標${ev.goal}件÷成約率${Math.round(ev.rate*100)}%${ev.count>1?'を'+ev.count+'回で按分':''}）`;
+    const spill= ev.bookWin>bookD;
+    const late= ev.day>=bookD ? `<b style="color:var(--pinkd)">この会は月内着金にほぼ乗りません。翌月の仕込みとして分けて数える</b>。` : '';
+    const note= late || `予約は開催後${LT.evToBook}日ほど入り続けます（実測）。<b>月内着金に効くのは ${m}/${ev.bookBy} までの予約</b>${spill?`。${m}/${ev.bookBy+1}以降に入る予約は翌月着金勢`:''}。実施は ${m}/${safeD} までに（成約目標${ev.goal}件÷成約率${Math.round(ev.rate*100)}%${ev.count>1?'を'+ev.count+'回で按分':''}）`;
     add(`${m}/${ev.day} ${ev.ch}勉強会`, ev.time+'〜', `${ev.need}件`, note);
   });
   // 常時導線
