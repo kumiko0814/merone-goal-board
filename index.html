@@ -250,24 +250,36 @@ section{padding:14px 16px 0;}
 <script>
 const SB_URL='https://inrvprlyobghviklulcv.supabase.co';
 const SB_KEY='sb_publishable_ZrCNcsRHMci-l7Fns8QtIA_X22XZGJp';
-const sb=supabase.createClient(SB_URL,SB_KEY);
+function showFatal(msg){
+  const el=document.createElement('div');
+  el.style.cssText='margin:30px 16px;padding:18px;background:#fff;border:1px solid #f3e3ec;border-radius:16px;font-size:12.5px;color:#574a58;line-height:1.9;';
+  el.innerHTML='<b>読み込みでつまずきました</b><br>'+msg+'<br><br><a href="javascript:location.reload()" style="color:#c66f96;font-weight:800">もう一度読み込む</a>';
+  document.querySelector('.app').appendChild(el);
+}
+window.addEventListener('error',e=>{ if(!document.querySelector('.app > div[style]')) showFatal('エラー: '+(e.message||'不明')+'<br>🍺から報告してもらえると助かります'); });
+let sb=null;
+try{ sb=supabase.createClient(SB_URL,SB_KEY); }
+catch(e){ showFatal('通信ライブラリを読み込めませんでした。Safari や Chrome で開き直してみてください'); }
 
 const CH_ALIAS={'famm':'Famm','abcash':'ABCash','she':'SHE','スマセル':'スマセル','広告':'広告','youtube':'YouTube','bucket list':'BUCKET LIST','バケットリスト':'BUCKET LIST','インタレストマッチ':'インタレストマッチ','シェアフル':'シェアフル'};
 const AUTO_CH=new Set(['Famm','ABCash','SHE','スマセル','シェアフル']); // sc_dealsから実績が取れるチャネル
 
-let targets={}, qTargets={}, session=null, currentEmail='';
+let targets={}, qTargets={}, session=null, currentEmail='', booted=false;
 
 function ym(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
 function today(){ return new Date(); }
 
-init();
+if(sb) init();
 async function init(){
-  const {data:{session:s}}=await sb.auth.getSession();
-  session=s;
-  if(!s){ document.getElementById('loginView').style.display='block'; document.getElementById('who').textContent='未ログイン'; return; }
-  currentEmail=s.user.email||'';
-  document.getElementById('who').textContent=currentEmail.split('@')[0];
-  await loadAll();
+  try{
+    const {data:{session:s}}=await sb.auth.getSession();
+    session=s;
+    if(!s){ document.getElementById('loginView').style.display='block'; document.getElementById('who').textContent='未ログイン'; booted=true; return; }
+    currentEmail=s.user.email||'';
+    document.getElementById('who').textContent=currentEmail.split('@')[0];
+    await loadAll();
+  }catch(e){ showFatal('データ取得に失敗しました（'+(e.message||e)+'）'); }
+  booted=true;
 }
 async function doLogin(){
   const email=document.getElementById('email').value.trim();
@@ -275,7 +287,7 @@ async function doLogin(){
   const {error}=await sb.auth.signInWithOtp({email, options:{emailRedirectTo:location.href.split('#')[0]}});
   document.getElementById('loginHint').textContent=error?('送信できませんでした: '+error.message):'メールを送りました。届いたリンクを開いてください（数分かかることがあります）';
 }
-sb.auth.onAuthStateChange((_e,s)=>{ if(s&&!session){ location.reload(); } });
+if(sb) sb.auth.onAuthStateChange((ev,s)=>{ if(ev==='SIGNED_IN' && booted && s && !session){ location.reload(); } });
 
 async function loadAll(){
   const now=today(), curYm=ym(now);
