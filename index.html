@@ -234,6 +234,16 @@ section{padding:14px 16px 0;}
     </section>
 
     <section>
+      <div class="sec-h"><span class="tag">OTHER</span><b>その他導線</b><small>おとな女子・はるもり等</small></div>
+      <div class="card" style="padding:12px 14px" id="otherBox"></div>
+    </section>
+
+    <section>
+      <div class="sec-h"><span class="tag">LIST</span><b>今月の面談予定（明細）</b><small>2時間ごと自動同期</small></div>
+      <div class="card" style="padding:6px 12px; max-height:320px; overflow-y:auto" id="apptList"></div>
+    </section>
+
+    <section>
       <div class="sec-h"><span class="tag">ROAS</span><b>広告の費用対効果</b><small>目標500%</small></div>
       <div class="card" style="padding:14px 16px" id="roasBox"></div>
     </section>
@@ -315,6 +325,7 @@ const NO_DATE_YET=['Famm','BUCKET LIST']; // 勉強会日程が未確定のチ�
 const AUTO_CH=new Set(['Famm','ABCash','SHE','スマセル','シェアフル']); // sc_dealsから実績が取れるチャネル
 
 let targets={}, qTargets={}, session=null, currentEmail='', booted=false;
+const CLOSER_NAMES={};
 
 function ym(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
 function today(){ return new Date(); }
@@ -369,7 +380,10 @@ async function loadAll(){
   renderReverse(now,curYm,monthMeet[curYm]||0,appts.length);
   renderCal(now,curYm,monthActual[curYm]||0,reports);
   renderEvents(now,curYm);
+  try{ const {data:cl}=await sb.from('sc_closers').select('id,name'); (cl||[]).forEach(c=>CLOSER_NAMES[c.id]=c.name); }catch(e){}
   renderChannels(curYm,deals);
+  renderOthers(curYm,appts,deals);
+  renderApptList(appts);
   renderRoas(curYm,deals);
   renderQuarter(q3,monthActual,curYm);
   renderClosers(stats.filter(r=>r.ym===curYm));
@@ -554,6 +568,46 @@ function renderChannels(curYm,deals){
     g.appendChild(div);
   });
   document.getElementById('chNote').textContent='実績はダッシュボードの面談報告（即決・入金完了）を数えています。抜けがあれば面談報告の入力をお願いします';
+}
+
+// KR3目標にないチャネル（LiLI=はるか×もりくみ・シンママ・自社など）をその他導線として供給表示
+function renderOthers(curYm,appts,deals){
+  const known=new Set(Object.keys(targets[curYm]||{}).filter(k=>!k.startsWith('AD_')).map(k=>k.toLowerCase()));
+  const norm=s=>{const a=CH_ALIAS[(s||'').toLowerCase()]||CH_ALIAS[s]||s||'不明'; return a;};
+  const isOther=al=>!known.has(String(norm(al)).toLowerCase());
+  const oa={};
+  appts.forEach(a=>{ const al=norm(a.alliance); if(isOther(al)) oa[al]=(oa[al]||0)+1; });
+  const oc={};
+  deals.forEach(dl=>{ if(!['即決','入金完了','分割支払い中'].includes(dl.status||'')) return;
+    const al=norm(dl.alliance); if(isOther(al)) oc[al]=(oc[al]||0)+1; });
+  const el=document.getElementById('otherBox');
+  const parts=[...new Set([...Object.keys(oa),...Object.keys(oc)])].map(al=>{
+    const label= al==='LiLI'?'はるか×もりくみ(LiLI)':al;
+    return `${label} 面談${oa[al]||0}${oc[al]?'・成約'+oc[al]:''}`;
+  });
+  el.innerHTML= parts.length
+    ? `<div style="font-size:12px; color:var(--plum2); font-weight:700">${parts.join('　／　')}</div>
+       <div style="font-size:10px; color:var(--sub); font-weight:600; margin-top:3px">プロモは行わないが面談供給・成約としてカウント中（逆算ラインの「設定済み」に含む）</div>`
+    : `<div style="font-size:11px; color:var(--sub); font-weight:600">今月のその他導線の面談はまだありません</div>`;
+}
+
+// 今月の面談予定 明細
+function renderApptList(appts){
+  const wrap=document.getElementById('apptList');
+  if(!appts.length){ wrap.innerHTML='<div class="skel">今月の設定済み面談はまだありません（2時間ごとに自動同期）</div>'; return; }
+  const rows=[...appts].sort((a,b)=>String(a.start_at).localeCompare(String(b.start_at)));
+  wrap.innerHTML=rows.map(a=>{
+    const d=new Date(a.start_at);
+    const w='日月火水木金土'[d.getDay()];
+    const t=`${d.getMonth()+1}/${d.getDate()}(${w}) ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    const done=d<new Date();
+    return `<div style="display:flex; gap:8px; align-items:center; padding:7px 4px; border-bottom:1px dashed var(--line); font-size:11.5px; ${done?'opacity:.55':''}">
+      <span style="font-weight:800; color:var(--plum2); white-space:nowrap">${t}</span>
+      <span style="flex:1; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${(a.customer||'—')}</span>
+      <span style="font-size:9.5px; font-weight:800; color:#fff; background:var(--grad-lav); border-radius:999px; padding:1px 8px; white-space:nowrap">${a.alliance||'—'}</span>
+      <span style="font-size:10px; color:var(--sub); font-weight:700; white-space:nowrap">${CLOSER_NAMES[a.closer_id]||a.closer_id||''}</span>
+    </div>`;
+  }).join('');
 }
 
 function renderRoas(curYm,deals){
