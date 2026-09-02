@@ -60,6 +60,12 @@ section{padding:14px 16px 0;}
 .main .pace{font-size:12.5px; color:var(--plum2); font-weight:700;}
 .main .pace b{color:var(--pinkd); font-size:15px;}
 .main .cheer{margin-top:8px; font-size:11.5px; color:var(--sub); font-weight:600;}
+.main .stats{display:flex; gap:8px; margin-top:12px;}
+.main .stat{flex:1; background:var(--bg2); border:1px solid var(--line); border-radius:14px; padding:9px 6px;}
+.main .stat b{display:block; font-size:20px; color:var(--plum2); line-height:1.3;}
+.main .stat b small{font-size:11px; color:var(--sub);}
+.main .stat span{font-size:10px; color:var(--sub); font-weight:700;}
+.main .stat .sub2{display:block; font-size:9.5px; color:var(--sub); font-weight:600; margin-top:1px;}
 
 /* calendar */
 .cal{padding:14px 8px 12px;}
@@ -186,6 +192,10 @@ section{padding:14px 16px 0;}
           <div class="big"><span id="mNow">–</span><small> / <span id="mTarget">–</span>件</small></div>
           <div class="bar"><div class="fill" id="mFill"></div></div>
           <div class="pace" id="mPace">読み込み中…</div>
+          <div class="stats">
+            <div class="stat"><span>面談のたくわえ</span><b id="sMtg">–</b><span class="sub2" id="sMtgSub"></span></div>
+            <div class="stat"><span>今月の成約率</span><b id="sRate">–</b><span class="sub2" id="sRateSub"></span></div>
+          </div>
           <div class="cheer" id="mCheer"></div>
         </div>
       </div>
@@ -262,6 +272,17 @@ section{padding:14px 16px 0;}
     <section>
       <div class="sec-h"><span class="tag">TEAM</span><b>今月のクローザー</b></div>
       <div class="chips" id="closerChips"><span class="skel">読み込み中…</span></div>
+    </section>
+
+    <section>
+      <div class="sec-h"><span class="tag">MEMO</span><b>実測リードタイム</b><small>2026年3〜8月・成約264名／予約通知222件</small></div>
+      <div class="card" style="padding:12px 14px; font-size:11px; color:var(--plum2); font-weight:600; line-height:2">
+        面談→入金：全体 中央値0日・平均2.4日（91%が7日以内）<br>
+        　ABCash 中央値1日・平均3.5日（いちばん遅い）／famm 0日・2.2日／SHE 0日・1.5日<br>
+        予約→面談実施：中央値6日<br>
+        勉強会→予約：8日間入り続く（初動3日で約6割）<br>
+        <b style="color:var(--pinkd)">月末3日以内の面談は31%が翌月入金</b>（ABCashは38%）
+      </div>
     </section>
 
     <div class="foot">
@@ -376,7 +397,7 @@ async function loadAll(){
   const monthActual={}, monthMeet={}; q3.forEach(m=>{monthActual[m]=0; monthMeet[m]=0;});
   stats.forEach(r=>{ monthActual[r.ym]=(monthActual[r.ym]||0)+(r.closed||0); monthMeet[r.ym]=(monthMeet[r.ym]||0)+(r.meetings||0); });
 
-  renderMain(now,curYm,monthActual[curYm]||0);
+  renderMain(now,curYm,monthActual[curYm]||0,monthMeet[curYm]||0,appts.length);
   renderReverse(now,curYm,monthMeet[curYm]||0,appts.length);
   renderCal(now,curYm,monthActual[curYm]||0,reports);
   renderEvents(now,curYm);
@@ -393,8 +414,20 @@ async function loadAll(){
 
 function monthTotal(m){ const t=targets[m]||{}; return Object.entries(t).filter(([k])=>!k.startsWith('AD_')).reduce((a,[,v])=>a+v,0); }
 
-function renderMain(now,curYm,actual){
+function renderMain(now,curYm,actual,meet,apptCount){
   const total=monthTotal(curYm);
+  // 面談のたくわえ（実施済み＋設定済み予約・前月からの持ち越し含む）と今月の実測成約率
+  const needMtg=Math.ceil(total/LT.closeRate);
+  const supply=(meet||0)+(apptCount||0);
+  document.getElementById('sMtg').innerHTML=`${supply}<small> / ${needMtg}件</small>`;
+  document.getElementById('sMtgSub').textContent=`実施済み${meet||0}＋予約済み${apptCount||0}（先月分の持ち越し含む）`;
+  if(meet>0){
+    document.getElementById('sRate').textContent=Math.round(actual/meet*100)+'%';
+    document.getElementById('sRateSub').textContent=`成約${actual}÷面談実施${meet}`;
+  }else{
+    document.getElementById('sRate').textContent='—';
+    document.getElementById('sRateSub').textContent='今月の面談データ待ち（参考: 実測平均55%）';
+  }
   const dim=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
   const day=now.getDate(), remain=dim-day+1;
   const left=Math.max(0,total-actual);
