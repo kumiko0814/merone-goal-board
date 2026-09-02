@@ -352,18 +352,21 @@ async function loadAll(){
 
   // 実績（3系統・取れたものだけ使う）
   const q3=['2026-09','2026-10','2026-11'];
-  const [ms,rp,dl]=await Promise.all([
+  const nextYm=(()=>{const d2=new Date(now.getFullYear(),now.getMonth()+1,1);return ym(d2);})();
+  const [ms,rp,dl,ap]=await Promise.all([
     sb.from('sc_month_stats').select('ym,closer_id,closed,meetings').in('ym',q3),
     sb.from('sc_reports').select('report_date,closed,instant_close').gte('report_date',curYm+'-01'),
-    sb.from('sc_deals').select('alliance,status,deal_date,updated_at').gte('deal_date',curYm+'-01')
+    sb.from('sc_deals').select('alliance,status,deal_date,updated_at').gte('deal_date',curYm+'-01'),
+    sb.from('sc_appointments').select('start_at,alliance,status').gte('start_at',curYm+'-01').lt('start_at',nextYm+'-01')
   ]);
   const stats=ms.data||[], reports=rp.data||[], deals=dl.data||[];
+  const appts=(ap.data||[]).filter(a=>!String(a.status||'').includes('キャンセル'));
 
   const monthActual={}, monthMeet={}; q3.forEach(m=>{monthActual[m]=0; monthMeet[m]=0;});
   stats.forEach(r=>{ monthActual[r.ym]=(monthActual[r.ym]||0)+(r.closed||0); monthMeet[r.ym]=(monthMeet[r.ym]||0)+(r.meetings||0); });
 
   renderMain(now,curYm,monthActual[curYm]||0);
-  renderReverse(now,curYm,monthMeet[curYm]||0);
+  renderReverse(now,curYm,monthMeet[curYm]||0,appts.length);
   renderCal(now,curYm,monthActual[curYm]||0,reports);
   renderEvents(now,curYm);
   renderChannels(curYm,deals);
@@ -406,7 +409,7 @@ function deadlines(now){
   const optD=Math.max(1,mtgD-LT.optToMtg);
   return {dim,mtgD,safeD,bookD,optD};
 }
-function renderReverse(now,curYm,actualMeet){
+function renderReverse(now,curYm,actualMeet,apptCount){
   const total=monthTotal(curYm), m=parseInt(curYm.slice(5));
   const {mtgD,safeD,optD}=deadlines(now);
   const needMtg=Math.ceil(total/LT.closeRate);
@@ -419,10 +422,11 @@ function renderReverse(now,curYm,actualMeet){
   lines.push(`面談実施は <b style="color:var(--pinkd)">${m}/${safeD}までが安全圏</b>${safeLeft>=0?`（あと${safeLeft}日）`:'（安全圏は終了）'}`);
   lines.push(`<span style="font-size:11px; color:var(--sub)">月末3日以内の実施は31%が翌月着金（実測）。${m}/${safeD+1}〜${mtgD}は要注意</span>`);
   document.getElementById('rvLines').innerHTML=lines.join('<br>');
-  const mtgLeftCnt=Math.max(0,needMtg-actualMeet);
+  const supply=actualMeet+(apptCount||0);   // 実施済み＋設定済み（前月勉強会からの持ち越し予約を含む）
+  const mtgLeftCnt=Math.max(0,needMtg-supply);
   const safeDays=Math.max(0,safeD-day);
   const perDay=safeDays>0?(mtgLeftCnt/safeDays).toFixed(1):mtgLeftCnt;
-  document.getElementById('rvMtg').textContent=`成約${total}件には面談 約${needMtg}件（成約率55%実測）。実施済み${actualMeet}件・あと${mtgLeftCnt}件 → 安全圏内なら1日${perDay}件ペース`;
+  document.getElementById('rvMtg').innerHTML=`成約${total}件には面談 約${needMtg}件（成約率55%実測）<br>実施済み ${actualMeet}件 ＋ 設定済みの予約 ${apptCount||0}件 ＝ 見込み ${supply}件 → <b style="color:var(--pinkd)">あと${mtgLeftCnt}件</b>（安全圏内なら1日${perDay}件）`;
 }
 // 勉強会ごとの必要面談数（カレンダーとカードで共用）
 function eventNeeds(now,curYm){
