@@ -197,6 +197,7 @@ section{padding:14px 16px 0;}
             <div class="stat"><span>今月の成約率</span><b id="sRate">–</b><span class="sub2" id="sRateSub"></span></div>
           </div>
           <div class="sub2" id="mStock" style="display:none; margin-top:8px; text-align:center;"></div>
+          <div class="sub2" id="mPaid" style="display:none; margin-top:6px; text-align:center;"></div>
           <div class="cheer" id="mCheer"></div>
         </div>
       </div>
@@ -387,18 +388,23 @@ async function loadAll(){
   const q3=['2026-09','2026-10','2026-11'];
   const nextYm=(()=>{const d2=new Date(now.getFullYear(),now.getMonth()+1,1);return ym(d2);})();
   const [ms,rp,dl,ap]=await Promise.all([
-    sb.from('sc_month_stats').select('ym,closer_id,closed,meetings,p_verbal,p_loan').in('ym',q3),
+    sb.from('sc_month_stats').select('ym,closer_id,closed,meetings,p_verbal,p_loan,p_after,p_long,close_rate').in('ym',q3),
     sb.from('sc_reports').select('report_date,closed,instant_close').gte('report_date',curYm+'-01'),
     sb.from('sc_deals').select('alliance,status,deal_date,updated_at').gte('deal_date',curYm+'-01'),
     sb.from('sc_appointments').select('start_at,alliance,status').gte('start_at',curYm+'-01').lt('start_at',nextYm+'-01')
   ]);
-  const stats=ms.data||[], reports=rp.data||[], deals=dl.data||[];
+  const statsAll=ms.data||[], reports=rp.data||[], deals=dl.data||[];
   const appts=(ap.data||[]).filter(a=>!String(a.status||'').includes('キャンセル'));
+
+  // '_sheet_paid' はシートRAWDATAの入金確認集計を運ぶ合成行（p_after=入金確認済み/p_long=入金待ち/close_rate=待ちのうち4日以上経過）
+  const paidRow=statsAll.find(r=>r.closer_id==='_sheet_paid' && r.ym===curYm);
+  const paidInfo=paidRow?{paid:paidRow.p_after||0, wait:paidRow.p_long||0, late:Math.round(paidRow.close_rate||0)}:null;
+  const stats=statsAll.filter(r=>r.closer_id!=='_sheet_paid');
 
   const monthActual={}, monthMeet={}, monthStock={}; q3.forEach(m=>{monthActual[m]=0; monthMeet[m]=0; monthStock[m]=0;});
   stats.forEach(r=>{ monthActual[r.ym]=(monthActual[r.ym]||0)+(r.closed||0); monthMeet[r.ym]=(monthMeet[r.ym]||0)+(r.meetings||0); monthStock[r.ym]=(monthStock[r.ym]||0)+(r.p_verbal||0)+(r.p_loan||0); });
 
-  renderMain(now,curYm,monthActual[curYm]||0,monthMeet[curYm]||0,appts.length,monthStock[curYm]||0);
+  renderMain(now,curYm,monthActual[curYm]||0,monthMeet[curYm]||0,appts.length,monthStock[curYm]||0,paidInfo);
   renderReverse(now,curYm,monthMeet[curYm]||0,appts.length);
   renderCal(now,curYm,monthActual[curYm]||0,reports);
   renderEvents(now,curYm);
@@ -415,7 +421,7 @@ async function loadAll(){
 
 function monthTotal(m){ const t=targets[m]||{}; return Object.entries(t).filter(([k])=>!k.startsWith('AD_')).reduce((a,[,v])=>a+v,0); }
 
-function renderMain(now,curYm,actual,meet,apptCount,stock){
+function renderMain(now,curYm,actual,meet,apptCount,stock,paidInfo){
   const total=monthTotal(curYm);
   // 面談のたくわえ（実施済み＋設定済み予約・前月からの持ち越し含む）と今月の実測成約率
   const needMtg=Math.ceil(total/LT.closeRate);
@@ -434,6 +440,21 @@ function renderMain(now,curYm,actual,meet,apptCount,stock){
     const st=document.getElementById('mStock');
     st.style.display='block';
     st.textContent=`このほかに ローン申請中・口頭合意が ${stock}件 待機中（決まると成約に変わります）`;
+  }
+  // 入金確認の2段表示（シートRAWDATAの初回入金日から自動集計・10分ごと同期）
+  if(paidInfo){
+    const pd=document.getElementById('mPaid');
+    pd.style.display='block';
+    let t=`入金確認済み ${paidInfo.paid}件`;
+    if(paidInfo.wait>0){
+      t+=` ／ 入金待ち ${paidInfo.wait}件`;
+      if(paidInfo.late>0) t+=`（うち面談から4日以上 ${paidInfo.late}件）`;
+      pd.style.color='var(--pinkd)'; pd.style.fontWeight='800';
+    }else{
+      t+=' ／ 入金待ちなし（全員確認済み）';
+      pd.style.color=''; pd.style.fontWeight='';
+    }
+    pd.textContent=t;
   }
   const dim=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
   const day=now.getDate(), remain=dim-day+1;
