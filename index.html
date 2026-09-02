@@ -656,10 +656,9 @@ function renderRoas(curYm,deals){
   const adPrice=((targets['2026-ALL']||{})['AD_PRICE'])||0;
   const adDeals=deals.filter(dl=>['即決','入金完了','分割支払い中'].includes(dl.status||'') && String(dl.alliance||'').includes('広告')).length;
   const box=document.getElementById('roasBox');
-  if(!adCost||!adPrice){
-    box.innerHTML=`<div style="font-size:12px; color:var(--sub); font-weight:600">今月の広告費が未設定です。setup.htmlのSQLでAD_COSTを実額に更新すると自動計算されます</div>`;
-    return;
-  }
+  // 広告費が未設定の月はカードごと出さない（設定は任意。入れば自動で復活）
+  if(!adCost||!adPrice){ box.style.display='none'; return; }
+  box.style.display='';
   const rev=adDeals*adPrice;
   const roas=Math.round(rev/adCost*100);
   const col= roas>=500?'var(--pinkd)': roas>=200?'#5f97be':'var(--sub)';
