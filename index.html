@@ -388,7 +388,7 @@ async function loadAll(){
   const q3=['2026-09','2026-10','2026-11'];
   const nextYm=(()=>{const d2=new Date(now.getFullYear(),now.getMonth()+1,1);return ym(d2);})();
   const [ms,rp,dl,ap]=await Promise.all([
-    sb.from('sc_month_stats').select('ym,closer_id,closed,meetings,p_verbal,p_loan,p_after,p_long,close_rate').in('ym',q3),
+    sb.from('sc_month_stats').select('ym,closer_id,closed,meetings,p_verbal,p_loan,p_after,p_long,close_rate,target_meetings,target_deals').in('ym',q3),
     sb.from('sc_reports').select('report_date,closed,instant_close').gte('report_date',curYm+'-01'),
     sb.from('sc_deals').select('alliance,status,deal_date,updated_at').gte('deal_date',curYm+'-01'),
     sb.from('sc_appointments').select('start_at,alliance,status').gte('start_at',curYm+'-01').lt('start_at',nextYm+'-01')
@@ -396,22 +396,30 @@ async function loadAll(){
   const statsAll=ms.data||[], reports=rp.data||[], deals=dl.data||[];
   const appts=(ap.data||[]).filter(a=>!String(a.status||'').includes('キャンセル'));
 
-  // '_sheet_paid' はシートRAWDATAの入金確認集計を運ぶ合成行（p_after=入金確認済み/p_long=入金待ち/close_rate=待ちのうち4日以上経過）
+  // '_sheet_paid' はシートRAWDATA直読みの集計を運ぶ合成行
+  // p_after=入金確認済み/p_long=入金待ち/close_rate=待ちのうち4日以上/target_meetings=当月実施済み面談/target_deals=今後の予約
   const paidRow=statsAll.find(r=>r.closer_id==='_sheet_paid' && r.ym===curYm);
-  const paidInfo=paidRow?{paid:paidRow.p_after||0, wait:paidRow.p_long||0, late:Math.round(paidRow.close_rate||0)}:null;
+  const paidInfo=paidRow?{paid:paidRow.p_after||0, wait:paidRow.p_long||0, late:Math.round(paidRow.close_rate||0),
+    done:paidRow.target_meetings||0, future:paidRow.target_deals||0}:null;
   const stats=statsAll.filter(r=>r.closer_id!=='_sheet_paid');
 
   const monthActual={}, monthMeet={}, monthStock={}; q3.forEach(m=>{monthActual[m]=0; monthMeet[m]=0; monthStock[m]=0;});
   stats.forEach(r=>{ monthActual[r.ym]=(monthActual[r.ym]||0)+(r.closed||0); monthMeet[r.ym]=(monthMeet[r.ym]||0)+(r.meetings||0); monthStock[r.ym]=(monthStock[r.ym]||0)+(r.p_verbal||0)+(r.p_loan||0); });
 
-  renderMain(now,curYm,monthActual[curYm]||0,monthMeet[curYm]||0,appts.length,monthStock[curYm]||0,paidInfo);
-  renderReverse(now,curYm,monthMeet[curYm]||0,appts.length);
+  // たくわえはシート直読みを正とする（sc_appointmentsは日程変更・キャンセルの残骸が過去分に残り水増しされるため）
+  const t0=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  const apptsFuture=appts.filter(a=>new Date(a.start_at)>=t0);
+  const supplyDone=paidInfo?Math.max(monthMeet[curYm]||0,paidInfo.done):(monthMeet[curYm]||0);
+  const supplyFuture=paidInfo?paidInfo.future:apptsFuture.length;
+
+  renderMain(now,curYm,monthActual[curYm]||0,supplyDone,supplyFuture,monthStock[curYm]||0,paidInfo);
+  renderReverse(now,curYm,supplyDone,supplyFuture);
   renderCal(now,curYm,monthActual[curYm]||0,reports);
   renderEvents(now,curYm);
   try{ const {data:cl}=await sb.from('sc_closers').select('id,name'); (cl||[]).forEach(c=>CLOSER_NAMES[c.id]=c.name); }catch(e){}
   renderChannels(curYm,deals);
-  renderOthers(curYm,appts,deals);
-  renderApptList(appts);
+  renderOthers(curYm,apptsFuture,deals);
+  renderApptList(apptsFuture);
   renderRoas(curYm,deals);
   renderQuarter(q3,monthActual,curYm);
   renderClosers(stats.filter(r=>r.ym===curYm));
@@ -427,7 +435,7 @@ function renderMain(now,curYm,actual,meet,apptCount,stock,paidInfo){
   const needMtg=Math.ceil(total/LT.closeRate);
   const supply=(meet||0)+(apptCount||0);
   document.getElementById('sMtg').innerHTML=`${supply}<small> / ${needMtg}件</small>`;
-  document.getElementById('sMtgSub').textContent=`実施済み${meet||0}＋予約済み${apptCount||0}（先月分の持ち越し含む）`;
+  document.getElementById('sMtgSub').textContent=`実施済み${meet||0}＋これからの予約${apptCount||0}（セールスシート直読み）`;
   if(meet>0){
     document.getElementById('sRate').textContent=Math.round(actual/meet*100)+'%';
     document.getElementById('sRateSub').textContent=`成約${actual}÷面談実施${meet}`;
