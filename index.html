@@ -408,6 +408,9 @@ async function loadAll(){
   const monthActual={}, monthMeet={}, monthStock={}; q3.forEach(m=>{monthActual[m]=0; monthMeet[m]=0; monthStock[m]=0;});
   stats.forEach(r=>{ monthActual[r.ym]=(monthActual[r.ym]||0)+(r.closed||0); monthMeet[r.ym]=(monthMeet[r.ym]||0)+(r.meetings||0); monthStock[r.ym]=(monthStock[r.ym]||0)+(r.p_verbal||0)+(r.p_loan||0); });
 
+  // シートに当月の集計表がまだ無い月初でも、RAWDATA直読みの成約数（入金済み＋入金待ち）で表示する
+  if(paidInfo){ monthActual[curYm]=Math.max(monthActual[curYm]||0, (paidInfo.paid||0)+(paidInfo.wait||0)); }
+
   // たくわえはシート直読みを正とする（sc_appointmentsは日程変更・キャンセルの残骸が過去分に残り水増しされるため）
   const t0=new Date(now.getFullYear(),now.getMonth(),now.getDate());
   const apptsFuture=appts.filter(a=>new Date(a.start_at)>=t0);
