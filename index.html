@@ -390,7 +390,7 @@ async function loadAll(){
   const q3=['2026-09','2026-10','2026-11'];
   const nextYm=(()=>{const d2=new Date(now.getFullYear(),now.getMonth()+1,1);return ym(d2);})();
   const [ms,rp,dl,ap]=await Promise.all([
-    sb.from('sc_month_stats').select('ym,closer_id,closed,meetings,p_verbal,p_loan,p_after,p_long,close_rate,target_meetings,target_deals').in('ym',q3),
+    sb.from('sc_month_stats').select('*').in('ym',q3),
     sb.from('sc_reports').select('report_date,closed,instant_close').gte('report_date',curYm+'-01'),
     sb.from('sc_deals').select('alliance,status,deal_date,updated_at').gte('deal_date',curYm+'-01'),
     sb.from('sc_appointments').select('start_at,alliance,status').gte('start_at',curYm+'-01').lt('start_at',nextYm+'-01')
@@ -406,6 +406,7 @@ async function loadAll(){
   const stats=statsAll.filter(r=>r.closer_id!=='_sheet_paid');
 
   const monthActual={}, monthMeet={}, monthStock={}; q3.forEach(m=>{monthActual[m]=0; monthMeet[m]=0; monthStock[m]=0;});
+  // p_loan列はこのテーブルに無い（存在するのはp_verbal=口頭合意〜入金前・p_long=長期戦）。undefinedは0扱いで安全
   stats.forEach(r=>{ monthActual[r.ym]=(monthActual[r.ym]||0)+(r.closed||0); monthMeet[r.ym]=(monthMeet[r.ym]||0)+(r.meetings||0); monthStock[r.ym]=(monthStock[r.ym]||0)+(r.p_verbal||0)+(r.p_loan||0); });
 
   // 「今月の成約」＝今月お金が入った件数（入金ベース）。当月面談での入金(paid)＋先月までの面談で今月入金(cross)。
