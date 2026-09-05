@@ -346,7 +346,8 @@ const EVENTS=[
   {d:'2026-09-25',time:'21:00',ch:'ABCash',short:'ABC勉',color:'#8fbfe6'}
 ];
 const ALWAYS_ON=['広告','YouTube','インタレストマッチ']; // 常時導線
-const NO_DATE_YET=['BUCKET LIST']; // 勉強会日程が未確定のチャネル（9月時点）
+// BUCKET LIST=勉強会ではなくYouTuber/インスタグラマーによるSNS紹介ルート。撮影9/18→SNS投稿→LINEオプト→面談。着地は10月
+const SNS_ROUTE=[{ch:'BUCKET LIST',note:'YouTuber・インスタグラマーがSNSで紹介する導線。撮影 9/18 → 投稿 → LINE登録 → 面談。着地は<b>10月</b>の見込み（9月成約には基本乗りません）'}];
 const AUTO_CH=new Set(['Famm','ABCash','SHE','スマセル','シェアフル']); // sc_dealsから実績が取れるチャネル
 
 let targets={}, qTargets={}, session=null, currentEmail='', booted=false;
@@ -626,11 +627,11 @@ function renderEvents(now,curYm){
   // 常時導線
   const alGoal=ALWAYS_ON.reduce((a,ch)=>a+(t[ch]||0),0);
   if(alGoal) add('広告・YouTube・インタレストマッチ','常時',`${Math.ceil(alGoal/LT.closeRate)}件`,`成約目標${alGoal}件÷55%。月内ペースで平準化・面談は${m}/${mtgD}まで`);
-  // 日程未確定
-  NO_DATE_YET.forEach(ch=>{
-    const goal=t[ch]||0; if(!goal) return;
-    const rate=CLOSE_RATE[ch]||LT.closeRate;
-    add(`${ch}`,'勉強会日程 未確定',`${Math.ceil(goal/rate)}件`,`日程が決まったら教えてください。カレンダーと逆算に自動反映します`);
+  // SNS紹介ルート（勉強会ではない）
+  SNS_ROUTE.forEach(s=>{
+    const goal=t[s.ch]||0; if(!goal) return;
+    const rate=CLOSE_RATE[s.ch]||LT.closeRate;
+    add(`${s.ch}`,'SNS紹介ルート',`${Math.ceil(goal/rate)}件`,s.note);
   });
 }
 
