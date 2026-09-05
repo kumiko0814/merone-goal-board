@@ -185,7 +185,7 @@ section{padding:14px 16px 0;}
     </div>
 
     <section>
-      <div class="sec-h"><span class="tag">GOAL</span><b>今月の成約</b><small id="mainSrc">セールスシートから自動集計</small></div>
+      <div class="sec-h"><span class="tag">GOAL</span><b>今月の成約（入金ベース）</b><small id="mainSrc">今月お金が入った件数</small></div>
       <div class="card main">
         <div class="in">
           <div class="label" id="mLabel">9月の目標</div>
@@ -408,8 +408,9 @@ async function loadAll(){
   const monthActual={}, monthMeet={}, monthStock={}; q3.forEach(m=>{monthActual[m]=0; monthMeet[m]=0; monthStock[m]=0;});
   stats.forEach(r=>{ monthActual[r.ym]=(monthActual[r.ym]||0)+(r.closed||0); monthMeet[r.ym]=(monthMeet[r.ym]||0)+(r.meetings||0); monthStock[r.ym]=(monthStock[r.ym]||0)+(r.p_verbal||0)+(r.p_loan||0); });
 
-  // シートに当月の集計表がまだ無い月初でも、RAWDATA直読みの成約数（入金済み＋入金待ち）で表示する
-  if(paidInfo){ monthActual[curYm]=Math.max(monthActual[curYm]||0, (paidInfo.paid||0)+(paidInfo.wait||0)); }
+  // 「今月の成約」＝今月お金が入った件数（入金ベース）。当月面談での入金(paid)＋先月までの面談で今月入金(cross)。
+  // くみこ定義: 入金＝成約。月初にシート集計表が無くてもRAWDATA直読みで必ず出す
+  if(paidInfo){ monthActual[curYm]=Math.max(monthActual[curYm]||0, (paidInfo.paid||0)+(paidInfo.cross||0)); }
 
   // たくわえはシート直読みを正とする（sc_appointmentsは日程変更・キャンセルの残骸が過去分に残り水増しされるため）
   const t0=new Date(now.getFullYear(),now.getMonth(),now.getDate());
@@ -450,9 +451,12 @@ function renderMain(now,curYm,actual,meet,apptCount,stock,paidInfo){
   const supply=(meet||0)+(apptCount||0);
   document.getElementById('sMtg').innerHTML=`${supply}<small> / ${needMtg}件</small>`;
   document.getElementById('sMtgSub').textContent=`実施済み${meet||0}＋これからの予約${apptCount||0}（セールスシート直読み）`;
-  if(meet>0){
-    document.getElementById('sRate').textContent=Math.round(actual/meet*100)+'%';
-    document.getElementById('sRateSub').textContent=`成約${actual}÷面談実施${meet}`;
+  // 成約率は当月面談ベース（月またぎ入金は分子に入れない＝率が160%になるのを防ぐ）
+  const rClosed=paidInfo?(paidInfo.paid||0):actual;
+  const rMeet=paidInfo?(paidInfo.done||0):meet;
+  if(rMeet>0){
+    document.getElementById('sRate').textContent=Math.round(rClosed/rMeet*100)+'%';
+    document.getElementById('sRateSub').textContent=`当月面談${rMeet}件のうち成約${rClosed}件`;
   }else{
     document.getElementById('sRate').textContent='—';
     document.getElementById('sRateSub').textContent='今月の面談データ待ち（参考: 実測平均55%）';
@@ -463,20 +467,18 @@ function renderMain(now,curYm,actual,meet,apptCount,stock,paidInfo){
     st.style.display='block';
     st.textContent=`このほかに ローン申請中・口頭合意が ${stock}件 待機中（決まると成約に変わります）`;
   }
-  // 入金確認の2段表示（シートRAWDATAの初回入金日から自動集計・10分ごと同期）
+  // 上の大きい成約数（＝今月お金が入った件数）の内訳。10分ごとにシートRAWDATAから自動集計
   if(paidInfo){
     const pd=document.getElementById('mPaid');
     pd.style.display='block';
-    let t=`入金確認済み ${paidInfo.paid}件`;
+    let t=`内訳: 今月面談ぶん ${paidInfo.paid}件 ＋ 先月までの面談ぶん ${paidInfo.cross}件`;
     if(paidInfo.wait>0){
-      t+=` ／ 入金待ち ${paidInfo.wait}件`;
+      t+=` ／ このほか入金待ち ${paidInfo.wait}件`;
       if(paidInfo.late>0) t+=`（うち面談から4日以上 ${paidInfo.late}件）`;
       pd.style.color='var(--pinkd)'; pd.style.fontWeight='800';
     }else{
-      t+=' ／ 入金待ちなし';
       pd.style.color=''; pd.style.fontWeight='';
     }
-    if(paidInfo.cross>0) t+=` ／ 先月までの面談ぶんの今月入金 ${paidInfo.cross}件`;
     pd.textContent=t;
   }
   const dim=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
