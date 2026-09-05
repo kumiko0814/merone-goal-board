@@ -426,7 +426,16 @@ async function loadAll(){
   renderQuarter(q3,monthActual,curYm);
   renderClosers(stats.filter(r=>r.ym===curYm));
   const d=new Date();
-  document.getElementById('heroDate').textContent=`${d.getMonth()+1}月${d.getDate()}日（${'日月火水木金土'[d.getDay()]}）`;
+  let syncTxt='';
+  try{
+    const {data:sm}=await sb.from('sc_sync_meta').select('last_synced').eq('id','sheet').single();
+    if(sm&&sm.last_synced){
+      const t=new Date(sm.last_synced);
+      const ageMin=Math.round((d-t)/60000);
+      syncTxt=`｜シート同期 ${t.getHours()}:${String(t.getMinutes()).padStart(2,'0')}`+(ageMin>30?`（${ageMin}分前・遅延中）`:'');
+    }
+  }catch(e){}
+  document.getElementById('heroDate').textContent=`${d.getMonth()+1}月${d.getDate()}日（${'日月火水木金土'[d.getDay()]}）${syncTxt}`;
 }
 
 function monthTotal(m){ const t=targets[m]||{}; return Object.entries(t).filter(([k])=>!k.startsWith('AD_')).reduce((a,[,v])=>a+v,0); }
