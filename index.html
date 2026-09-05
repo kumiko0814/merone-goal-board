@@ -339,12 +339,14 @@ const LT={optToMtg:12, mtgToPay:1, payBuffer:3, evToBook:8, bookToMtg:6, closeRa
 const CLOSE_RATE={'ABCash':0.60,'Famm':0.48,'SHE':0.56};
 // 勉強会日程（開催告知済みの公開情報のみ。日時が決まったらここに追記）
 const EVENTS=[
+  {d:'2026-09-10',time:'21:00',ch:'Famm',short:'famm勉',color:'#d9a94a'},
   {d:'2026-09-13',time:'21:00',ch:'ABCash',short:'ABC勉',color:'#8fbfe6'},
-  {d:'2026-09-25',time:'21:00',ch:'ABCash',short:'ABC勉',color:'#8fbfe6'},
-  {d:'2026-09-15',time:'20:00',ch:'SHE',short:'SHE勉',color:'#B98BEA'}
+  {d:'2026-09-15',time:'20:00',ch:'SHE',short:'SHE勉',color:'#B98BEA'},
+  {d:'2026-09-17',time:'9:30',ch:'Famm',short:'famm勉',color:'#d9a94a'},
+  {d:'2026-09-25',time:'21:00',ch:'ABCash',short:'ABC勉',color:'#8fbfe6'}
 ];
 const ALWAYS_ON=['広告','YouTube','インタレストマッチ']; // 常時導線
-const NO_DATE_YET=['Famm','BUCKET LIST']; // 勉強会日程が未確定のチャネル（9月時点）
+const NO_DATE_YET=['BUCKET LIST']; // 勉強会日程が未確定のチャネル（9月時点）
 const AUTO_CH=new Set(['Famm','ABCash','SHE','スマセル','シェアフル']); // sc_dealsから実績が取れるチャネル
 
 let targets={}, qTargets={}, session=null, currentEmail='', booted=false;
@@ -400,7 +402,7 @@ async function loadAll(){
   // p_after=入金確認済み/p_long=入金待ち/close_rate=待ちのうち4日以上/target_meetings=当月実施済み面談/target_deals=今後の予約
   const paidRow=statsAll.find(r=>r.closer_id==='_sheet_paid' && r.ym===curYm);
   const paidInfo=paidRow?{paid:paidRow.p_after||0, wait:paidRow.p_long||0, late:Math.round(paidRow.close_rate||0),
-    done:paidRow.target_meetings||0, future:paidRow.target_deals||0}:null;
+    done:paidRow.target_meetings||0, future:paidRow.target_deals||0, cross:Math.round(paidRow.achieve_rate||0)}:null;
   const stats=statsAll.filter(r=>r.closer_id!=='_sheet_paid');
 
   const monthActual={}, monthMeet={}, monthStock={}; q3.forEach(m=>{monthActual[m]=0; monthMeet[m]=0; monthStock[m]=0;});
@@ -459,9 +461,10 @@ function renderMain(now,curYm,actual,meet,apptCount,stock,paidInfo){
       if(paidInfo.late>0) t+=`（うち面談から4日以上 ${paidInfo.late}件）`;
       pd.style.color='var(--pinkd)'; pd.style.fontWeight='800';
     }else{
-      t+=' ／ 入金待ちなし（全員確認済み）';
+      t+=' ／ 入金待ちなし';
       pd.style.color=''; pd.style.fontWeight='';
     }
+    if(paidInfo.cross>0) t+=` ／ 先月までの面談ぶんの今月入金 ${paidInfo.cross}件`;
     pd.textContent=t;
   }
   const dim=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
