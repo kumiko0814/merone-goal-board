@@ -757,8 +757,12 @@ function renderOutcome(rows){
   if(!all){ head.textContent='今月の面談データ待ち（シート同期後に表示）'; tbl.innerHTML=''; note.textContent=''; return; }
   const held=all.meetings||0, won=all.closed||0, pipe=all.p_verbal||0, wait=all.p_after||0, lost=all.p_long||0, blank=all.instant||0;
   const dec=won+lost, decRate=dec?Math.round(won/dec*100):0, allRate=held?Math.round(won/held*100):0;
+  const c7=rows.find(r=>r.closer_id==='_oc_7d');
+  const c7held=c7?(c7.meetings||0):0, c7won=c7?(c7.closed||0):0, c7lost=c7?(c7.p_long||0):0, c7dec=c7won+c7lost;
+  const c7rate=c7dec?Math.round(c7won/c7dec*100):null;
   head.innerHTML=`実施 <b style="font-size:16px">${held}</b>件 → 成約 <b style="color:var(--pinkd);font-size:16px">${won}</b>・口頭合意/ローン待ち <b>${pipe}</b>・判断待ち <b>${wait}</b>・失注 <b>${lost}</b>・結果未記入 <b style="color:${blank>0?'var(--pinkd)':'inherit'}">${blank}</b><br>`
-    +`<span style="font-size:11px">決着した${dec}件の成約率 <b style="color:var(--pinkd)">${decRate}%</b>（実施全体では${allRate}%。未記入・判断待ちを分母に入れると低く見えます）</span>`;
+    +`<span style="font-size:11px">決着した${dec}件の成約率 <b style="color:var(--pinkd)">${decRate}%</b>（実施全体では${allRate}%。未記入・判断待ちを分母に入れると低く見えます）</span><br>`
+    +`<span style="font-size:11px">役員報告用（面談後7日以上の${c7held}件）: <b style="color:var(--pinkd)">${c7rate===null?'まだ7日経過分なし':c7rate+'%'}</b>${c7rate===null?'':`（成約${c7won}・失注${c7lost}）`}<span style="color:var(--sub)">　※入金の90%は面談から7日以内。これが一番ブレない数字</span></span>`;
   const per=rows.filter(r=>String(r.closer_id).startsWith('_oc_') && r.closer_id!=='_oc_all')
     .map(r=>({slug:r.closer_id.replace('_oc_',''), ...r})).sort((a,b)=>(b.meetings||0)-(a.meetings||0));
   const th='<tr style="color:var(--sub);font-size:10px"><th style="text-align:left;padding:4px 2px">担当</th><th>実施</th><th>成約</th><th>口頭/ローン</th><th>判断待ち</th><th>失注</th><th>未記入</th><th>決着率</th></tr>';
