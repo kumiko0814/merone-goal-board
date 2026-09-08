@@ -272,6 +272,17 @@ section{padding:14px 16px 0;}
     </section>
 
     <section>
+      <div class="sec-h"><span class="tag">RESULT</span><b>今月の面談結果</b><small>実施済み面談の行き先・シート直読み</small></div>
+      <div class="card" style="padding:12px 14px">
+        <div id="ocHead" style="font-size:12px; color:var(--plum2); font-weight:700; line-height:1.8"></div>
+        <div style="overflow-x:auto; margin-top:8px">
+          <table id="ocTable" style="width:100%; border-collapse:collapse; font-size:11px; font-weight:700; color:var(--plum)"></table>
+        </div>
+        <div id="ocNote" style="font-size:10px; color:var(--sub); font-weight:600; margin-top:8px; line-height:1.8"></div>
+      </div>
+    </section>
+
+    <section>
       <div class="sec-h"><span class="tag">TEAM</span><b>今月のクローザー</b></div>
       <div class="chips" id="closerChips"><span class="skel">読み込み中…</span></div>
     </section>
@@ -404,7 +415,7 @@ async function loadAll(){
   const paidRow=statsAll.find(r=>r.closer_id==='_sheet_paid' && r.ym===curYm);
   const paidInfo=paidRow?{paid:paidRow.p_after||0, wait:paidRow.p_long||0, late:Math.round(paidRow.close_rate||0),
     done:paidRow.target_meetings||0, future:paidRow.target_deals||0, cross:Math.round(paidRow.achieve_rate||0)}:null;
-  const stats=statsAll.filter(r=>r.closer_id!=='_sheet_paid');
+  const stats=statsAll.filter(r=>!String(r.closer_id||'').startsWith('_')); // 合成行(_sheet_paid/_oc_*)は除外
 
   const monthActual={}, monthMeet={}, monthStock={}; q3.forEach(m=>{monthActual[m]=0; monthMeet[m]=0; monthStock[m]=0;});
   // p_loan列はこのテーブルに無い（存在するのはp_verbal=口頭合意〜入金前・p_long=長期戦）。undefinedは0扱いで安全
@@ -431,6 +442,7 @@ async function loadAll(){
   renderRoas(curYm,deals);
   renderQuarter(q3,monthActual,curYm);
   renderClosers(stats.filter(r=>r.ym===curYm));
+  renderOutcome(statsAll.filter(r=>r.ym===curYm));
   const d=new Date();
   let syncTxt='';
   try{
@@ -736,6 +748,29 @@ function renderQuarter(q3,monthActual,curYm){
     el.innerHTML=`<b>${a} / ${mt}</b><span>${parseInt(m.slice(5))}月 ${mr}%${m===curYm?'・今月':''}</span>`;
     wrap.appendChild(el);
   });
+}
+
+function renderOutcome(rows){
+  // '_oc_all' / '_oc_<slug>' 合成行: meetings=実施 closed=成約 p_verbal=口頭合意・ローン p_after=判断待ち p_long=失注 instant=結果未記入 close_rate=決着ベース成約率
+  const all=rows.find(r=>r.closer_id==='_oc_all');
+  const head=document.getElementById('ocHead'), tbl=document.getElementById('ocTable'), note=document.getElementById('ocNote');
+  if(!all){ head.textContent='今月の面談データ待ち（シート同期後に表示）'; tbl.innerHTML=''; note.textContent=''; return; }
+  const held=all.meetings||0, won=all.closed||0, pipe=all.p_verbal||0, wait=all.p_after||0, lost=all.p_long||0, blank=all.instant||0;
+  const dec=won+lost, decRate=dec?Math.round(won/dec*100):0, allRate=held?Math.round(won/held*100):0;
+  head.innerHTML=`実施 <b style="font-size:16px">${held}</b>件 → 成約 <b style="color:var(--pinkd);font-size:16px">${won}</b>・口頭合意/ローン待ち <b>${pipe}</b>・判断待ち <b>${wait}</b>・失注 <b>${lost}</b>・結果未記入 <b style="color:${blank>0?'var(--pinkd)':'inherit'}">${blank}</b><br>`
+    +`<span style="font-size:11px">決着した${dec}件の成約率 <b style="color:var(--pinkd)">${decRate}%</b>（実施全体では${allRate}%。未記入・判断待ちを分母に入れると低く見えます）</span>`;
+  const per=rows.filter(r=>String(r.closer_id).startsWith('_oc_') && r.closer_id!=='_oc_all')
+    .map(r=>({slug:r.closer_id.replace('_oc_',''), ...r})).sort((a,b)=>(b.meetings||0)-(a.meetings||0));
+  const th='<tr style="color:var(--sub);font-size:10px"><th style="text-align:left;padding:4px 2px">担当</th><th>実施</th><th>成約</th><th>口頭/ローン</th><th>判断待ち</th><th>失注</th><th>未記入</th><th>決着率</th></tr>';
+  const td=(v,hl)=>`<td style="text-align:center;padding:4px 2px;${hl?'color:var(--pinkd)':''}">${v}</td>`;
+  tbl.innerHTML=th+per.map(r=>{
+    const d=(r.closed||0)+(r.p_long||0); const rate=d?Math.round((r.closed||0)/d*100)+'%':'—';
+    const nm=CLOSER_NAMES[r.slug]||r.slug;
+    return `<tr style="border-top:1px solid #f3e3ec"><td style="text-align:left;padding:4px 2px">${nm}</td>${td(r.meetings||0)}${td(r.closed||0,true)}${td(r.p_verbal||0)}${td(r.p_after||0)}${td(r.p_long||0)}${td(r.instant||0,(r.instant||0)>0)}${td(rate)}</tr>`;
+  }).join('');
+  note.textContent= blank>0
+    ? `結果未記入が${blank}件あります。面談当日にシートの「ステータス」を更新すると、ここが自動で埋まります（10分ごと同期）`
+    : '結果未記入はありません。全員の面談結果が記録されています';
 }
 
 async function renderClosers(rows){
