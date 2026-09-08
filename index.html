@@ -761,7 +761,8 @@ function renderOutcome(rows){
   const c7held=c7?(c7.meetings||0):0, c7won=c7?(c7.closed||0):0, c7lost=c7?(c7.p_long||0):0, c7dec=c7won+c7lost;
   const c7rate=c7dec?Math.round(c7won/c7dec*100):null;
   head.innerHTML=`実施 <b style="font-size:16px">${held}</b>件 → 成約 <b style="color:var(--pinkd);font-size:16px">${won}</b>・口頭合意/ローン待ち <b>${pipe}</b>・判断待ち <b>${wait}</b>・失注 <b>${lost}</b>・結果未記入 <b style="color:${blank>0?'var(--pinkd)':'inherit'}">${blank}</b><br>`
-    +`<span style="font-size:11px">決着した${dec}件の成約率 <b style="color:var(--pinkd)">${decRate}%</b>（実施全体では${allRate}%。未記入・判断待ちを分母に入れると低く見えます）</span><br>`
+    +`<span style="font-size:11px">決着した${dec}件の成約率 <b style="color:var(--pinkd)">${decRate}%</b>${blank===0?`（実施全体では${allRate}%）`:`　<span style="color:var(--sub)">※記録待ちが${blank}件あるため「全体の成約率」は出していません（出すと低く誤って見えます）</span>`}</span><br>`
+    +`<span style="font-size:11px">記録カバー率 <b style="color:${held&&blank===0?'var(--pinkd)':'var(--plum2)'}">${held?Math.round((held-blank)/held*100):100}%</b><span style="color:var(--sub)">　数字を信じてよいかのメーター。100%で成約率が確定します</span></span><br>`
     +`<span style="font-size:11px">役員報告用（面談後7日以上の${c7held}件）: <b style="color:var(--pinkd)">${c7rate===null?'まだ7日経過分なし':c7rate+'%'}</b>${c7rate===null?'':`（成約${c7won}・失注${c7lost}）`}<span style="color:var(--sub)">　※入金の90%は面談から7日以内。これが一番ブレない数字</span></span>`;
   const per=rows.filter(r=>String(r.closer_id).startsWith('_oc_') && r.closer_id!=='_oc_all')
     .map(r=>({slug:r.closer_id.replace('_oc_',''), ...r})).sort((a,b)=>(b.meetings||0)-(a.meetings||0));
