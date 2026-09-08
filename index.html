@@ -194,7 +194,11 @@ section{padding:14px 16px 0;}
           <div class="pace" id="mPace">読み込み中…</div>
           <div class="stats">
             <div class="stat"><span>面談のたくわえ</span><b id="sMtg">–</b><span class="sub2" id="sMtgSub"></span></div>
-            <div class="stat"><span>今月の成約率</span><b id="sRate">–</b><span class="sub2" id="sRateSub"></span></div>
+            <div class="stat"><span>口頭合意・ローン待ち</span><b id="sPipe">–</b><span class="sub2" id="sPipeSub"></span></div>
+          </div>
+          <div class="stats" style="margin-top:8px">
+            <div class="stat"><span>成約率（決着ベース）</span><b id="sRate">–</b><span class="sub2" id="sRateSub"></span></div>
+            <div class="stat"><span>成約率（判断待ち込み）</span><b id="sRateInc">–</b><span class="sub2" id="sRateIncSub"></span></div>
           </div>
           <div class="sub2" id="mStock" style="display:none; margin-top:8px; text-align:center;"></div>
           <div class="sub2" id="mPaid" style="display:none; margin-top:6px; text-align:center;"></div>
@@ -431,6 +435,7 @@ async function loadAll(){
   const supplyDone=paidInfo?Math.max(monthMeet[curYm]||0,paidInfo.done):(monthMeet[curYm]||0);
   const supplyFuture=paidInfo?paidInfo.future:apptsFuture.length;
 
+  window.__ocAll=statsAll.find(r=>r.closer_id==='_oc_all' && r.ym===curYm)||null;
   renderMain(now,curYm,monthActual[curYm]||0,supplyDone,supplyFuture,monthStock[curYm]||0,paidInfo);
   renderReverse(now,curYm,supplyDone,supplyFuture);
   renderCal(now,curYm,monthActual[curYm]||0,reports);
@@ -465,21 +470,28 @@ function renderMain(now,curYm,actual,meet,apptCount,stock,paidInfo){
   const supply=(meet||0)+(apptCount||0);
   document.getElementById('sMtg').innerHTML=`${supply}<small> / ${needMtg}件</small>`;
   document.getElementById('sMtgSub').textContent=`実施済み${meet||0}＋これからの予約${apptCount||0}（セールスシート直読み）`;
-  // 成約率は当月面談ベース（月またぎ入金は分子に入れない＝率が160%になるのを防ぐ）
-  const rClosed=paidInfo?(paidInfo.paid||0):actual;
-  const rMeet=paidInfo?(paidInfo.done||0):meet;
-  if(rMeet>0){
-    document.getElementById('sRate').textContent=Math.round(rClosed/rMeet*100)+'%';
-    document.getElementById('sRateSub').textContent=`当月面談${rMeet}件のうち成約${rClosed}件`;
+  // 成約率2本立て（くみこ確定）: 決着ベース=成約÷(成約+失注) / 判断待ち込み=成約÷(成約+失注+口頭合意ローン待ち+判断待ち)。出どころ=_oc_all（シート直読み）
+  const oc=window.__ocAll||null;
+  const won=oc?(oc.closed||0):0, lost=oc?(oc.p_long||0):0, pipe=oc?(oc.p_verbal||0):0, wait=oc?(oc.p_after||0):0, held=oc?(oc.meetings||0):0;
+  const dec=won+lost, inc=dec+pipe+wait;
+  if(oc && held>0){
+    document.getElementById('sRate').textContent=dec?Math.round(won/dec*100)+'%':'—';
+    document.getElementById('sRateSub').textContent=`成約${won}÷(成約${won}＋失注${lost})`;
+    document.getElementById('sRateInc').textContent=inc?Math.round(won/inc*100)+'%':'—';
+    document.getElementById('sRateIncSub').textContent=`＋口頭合意/ローン${pipe}＋判断待ち${wait}も分母`;
+    document.getElementById('sPipe').innerHTML=`${pipe}<small>件</small>`;
+    document.getElementById('sPipeSub').textContent=`判断待ち（長期戦含む）${wait}件・当月面談${held}件`;
   }else{
-    document.getElementById('sRate').textContent='—';
+    ['sRate','sRateInc','sPipe'].forEach(id=>document.getElementById(id).textContent='—');
     document.getElementById('sRateSub').textContent='今月の面談データ待ち（参考: 実測平均55%）';
+    document.getElementById('sRateIncSub').textContent='';
+    document.getElementById('sPipeSub').textContent='シート同期後に表示';
   }
-  // ローン申請中・口頭合意はシートの「口頭合意等含む成約数」と「成約数」の差。決まった時点で上の成約数に移る
-  if(stock>0){
+  // 口頭合意・ローン待ち・判断待ちは決まった時点で上の成約数に移る（先月からの持ち越しは追客リストに載る）
+  if(pipe+wait>0){
     const st=document.getElementById('mStock');
     st.style.display='block';
-    st.textContent=`このほかに ローン申請中・口頭合意が ${stock}件 待機中（決まると成約に変わります）`;
+    st.textContent=`口頭合意・ローン待ち ${pipe}件と判断待ち ${wait}件は、決まると上の成約数に移ります（実測: 面談から4日以内が勝負）`;
   }
   // 上の大きい成約数（＝今月お金が入った件数）の内訳。10分ごとにシートRAWDATAから自動集計
   if(paidInfo){
