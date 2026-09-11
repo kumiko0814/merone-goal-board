@@ -358,7 +358,7 @@ const EVENTS=[
   {d:'2026-09-13',time:'21:00',ch:'ABCash',short:'ABC勉',color:'#8fbfe6'},
   {d:'2026-09-15',time:'20:00',ch:'SHE',short:'SHE勉',color:'#B98BEA'},
   {d:'2026-09-17',time:'9:30',ch:'Famm',short:'famm勉',color:'#d9a94a'},
-  {d:'2026-09-25',time:'21:00',ch:'ABCash',short:'ABC勉',color:'#8fbfe6'}
+  {d:'2026-09-25',time:'',ch:'LiLI',short:'LiLI勉',color:'#7fc4b8'}   // 9/25はABCash中止→LiLI勉強会に変更（くみこ2026-09-11・時刻未定）
 ];
 const ALWAYS_ON=['広告','YouTube','インタレストマッチ']; // 常時導線
 // BUCKET LIST=勉強会ではなくYouTuber/インスタグラマーによるSNS紹介ルート。撮影9/18→SNS投稿→LINEオプト→面談。着地は10月
@@ -562,13 +562,13 @@ function eventNeeds(now,curYm){
   EVENTS.filter(ev=>ev.d.startsWith(curYm)).forEach(ev=>{ (byCh[ev.ch]=byCh[ev.ch]||[]).push(ev); });
   const out=[];
   Object.entries(byCh).forEach(([ch,evs])=>{
-    const goal=t[ch]||0; if(!goal) return;
+    const goal=t[ch]||0;                       // 目標チャネル外（LiLI等）は goal=0 → need=null で「目標外」表示
     const rate=CLOSE_RATE[ch]||LT.closeRate;
-    const needTotal=Math.ceil(goal/rate);
+    const needTotal=goal?Math.ceil(goal/rate):null;
     evs.sort((a,b)=>a.d.localeCompare(b.d)).forEach(ev=>{
       const day=parseInt(ev.d.slice(8));
       const {bookD}=deadlines(now);
-      out.push({...ev, day, need:Math.ceil(needTotal/evs.length), goal, rate, count:evs.length, win:mtgD-day,
+      out.push({...ev, day, need:(needTotal===null?null:Math.ceil(needTotal/evs.length)), goal, rate, count:evs.length, win:mtgD-day,
         bookWin:day+LT.evToBook,                       // 実測: 予約が入り続く窓の終わり
         bookBy:Math.min(day+LT.evToBook,bookD)});      // 月内着金に効く予約ライン
     });
@@ -618,7 +618,7 @@ function renderCal(now,curYm,actual,reports){
     if(d===safeD) flag+='<div style="font-size:8px; font-weight:800; color:#5f97be; line-height:1.2">実施〆</div>';
     if(d===mtgD) flag+='<div style="font-size:8px; font-weight:800; color:#9a8993; line-height:1.2">限界</div>';
     (evByDay[d]||[]).forEach(ev=>{
-      flag+=`<div class="ev" style="background:${ev.color}">${ev.short}強会</div><div class="evn">面談${ev.need}件とる</div>`;
+      flag+=`<div class="ev" style="background:${ev.color}">${ev.short}強会</div><div class="evn">${ev.need===null?'目標外・その他':'面談'+ev.need+'件とる'}</div>`;
     });
     e.innerHTML=`<div class="n">${d}</div><div class="t">${cumT}</div>${flag}`;
     g.appendChild(e);
@@ -647,7 +647,11 @@ function renderEvents(now,curYm){
     const spill= ev.bookWin>bookD;
     const late= ev.day>=bookD ? `<b style="color:var(--pinkd)">この会は月内着金にほぼ乗りません。翌月の仕込みとして分けて数える</b>。` : '';
     const note= late || `予約は開催後${LT.evToBook}日ほど入り続けます（実測）。<b>月内着金に効くのは ${m}/${ev.bookBy} までの予約</b>${spill?`。${m}/${ev.bookBy+1}以降に入る予約は翌月着金勢`:''}。実施は ${m}/${safeD} までに（成約目標${ev.goal}件÷成約率${Math.round(ev.rate*100)}%${ev.count>1?'を'+ev.count+'回で按分':''}）`;
-    add(`${m}/${ev.day} ${ev.ch}勉強会`, ev.time+'〜', `${ev.need}件`, note);
+    if(ev.need===null){
+      add(`${m}/${ev.day} ${ev.ch}勉強会`, ev.time?ev.time+'〜':'時刻未定', '目標外', `77件の目標チャネルに${ev.ch}はありません。面談・成約は「その他導線」として入金ベースの成約に計上されます。開催後${LT.evToBook}日の予約窓＋実施6日なので、この会の成約は主に翌月着地です`);
+      return;
+    }
+    add(`${m}/${ev.day} ${ev.ch}勉強会`, ev.time?ev.time+'〜':'時刻未定', `${ev.need}件`, note);
   });
   // 常時導線
   const alGoal=ALWAYS_ON.reduce((a,ch)=>a+(t[ch]||0),0);
