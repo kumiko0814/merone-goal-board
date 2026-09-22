@@ -412,6 +412,7 @@ async function loadAll(){
     sb.from('sc_appointments').select('start_at,alliance,status').gte('start_at',curYm+'-01').lt('start_at',nextYm+'-01')
   ]);
   const statsAll=ms.data||[], reports=rp.data||[], deals=dl.data||[];
+  window.__adSpend=statsAll.find(r=>r.closer_id==='_ad_spend' && r.ym===curYm)||null; // 広告費(Meta API)と広告経由入金の合成行
   const appts=(ap.data||[]).filter(a=>!String(a.status||'').includes('キャンセル'));
 
   // '_sheet_paid' はシートRAWDATA直読みの集計を運ぶ合成行
@@ -739,21 +740,30 @@ function renderRoas(curYm,deals){
   const adPrice=((targets['2026-ALL']||{})['AD_PRICE'])||0;
   const adDeals=deals.filter(dl=>['即決','入金完了','分割支払い中'].includes(dl.status||'') && String(dl.alliance||'').includes('広告')).length;
   const box=document.getElementById('roasBox');
-  // 広告費が未設定の月はカードごと出さない（設定は任意。入れば自動で復活）
-  if(!adCost||!adPrice){ box.style.display='none'; return; }
+  const asp=window.__adSpend||null;
+  let rev, cost, dealsN, note;
+  if(asp && (asp.p_after||0)>0){
+    // 自動: 広告費＝Meta広告APIの当月実消化、成約＝セールス管理シートで経由が広告の当月入金（契約額合計）。10分ごと更新
+    cost=asp.p_after||0; dealsN=asp.closed||0; rev=asp.target_deals||0;
+    note='広告費はMeta広告APIの当月実消化（1日〜今日）、成約はセールス管理シートの経由＝広告の当月入金と契約額。10分ごと自動更新';
+  } else {
+    // 広告費が未設定の月はカードごと出さない（設定は任意。入れば自動で復活）
+    if(!adCost||!adPrice){ box.style.display='none'; return; }
+    cost=adCost; dealsN=adDeals; rev=adDeals*adPrice;
+    note='受注ベース・面談報告（クローザーボード）の広告成約から自動集計。広告費は月初に実額へ更新';
+  }
   box.style.display='';
-  const rev=adDeals*adPrice;
-  const roas=Math.round(rev/adCost*100);
+  const roas=cost?Math.round(rev/cost*100):0;
   const col= roas>=500?'var(--pinkd)': roas>=200?'#5f97be':'var(--sub)';
   box.innerHTML=`
     <div style="display:flex; align-items:baseline; gap:10px">
-      <b style="font-size:30px; color:${col}">${adDeals? roas.toLocaleString()+'%':'—'}</b>
+      <b style="font-size:30px; color:${col}">${dealsN? roas.toLocaleString()+'%':'—'}</b>
       <span style="font-size:11px; color:var(--sub); font-weight:700">目標 500%</span>
     </div>
     <div style="font-size:11.5px; color:var(--plum2); font-weight:700; margin-top:4px">
-      広告経由の成約 ${adDeals}件 × 受注単価 ＝ ${(rev/10000).toLocaleString()}万円 ／ 広告費 ${(adCost/10000).toLocaleString()}万円
+      広告経由の成約 ${dealsN}件（契約額 ${Math.round(rev/10000).toLocaleString()}万円）／ 広告費 ${Math.round(cost/10000).toLocaleString()}万円
     </div>
-    <div style="font-size:10px; color:var(--sub); font-weight:600; margin-top:3px">受注ベース・面談報告（クローザーボード）の広告成約から自動集計。広告費は月初に実額へ更新</div>`;
+    <div style="font-size:10px; color:var(--sub); font-weight:600; margin-top:3px">${note}</div>`;
 }
 
 function renderQuarter(q3,monthActual,curYm){
