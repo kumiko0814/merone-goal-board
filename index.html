@@ -470,6 +470,12 @@ function renderMain(now,curYm,actual,meet,apptCount,stock,paidInfo){
   const supply=(meet||0)+(apptCount||0);
   document.getElementById('sMtg').innerHTML=`${supply}<small> / ${needMtg}件</small>`;
   document.getElementById('sMtgSub').textContent=`実施済み${meet||0}＋これからの予約${apptCount||0}（セールスシート直読み）`;
+  // クローザー空き枠（closer-free-slots GAS の合成行 _fs_all_<MMDD>・今日から7日・Googleカレンダー＋シート面談予定）
+  try{ const t0=new Date(); t0.setHours(0,0,0,0); let wk=0, has=false;
+    for(let i=0;i<7;i++){ const d=new Date(t0.getTime()+i*86400000); const k=String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
+      const r=statsAll.find(x=>x.closer_id==='_fs_all_'+k); if(r){ has=true; wk+=(r.meetings||0); } }
+    if(has) document.getElementById('sMtgSub').textContent+=`／クローザー空き枠 今日から7日で${wk}枠`;
+  }catch(e){}
   // 成約率2本立て（くみこ確定）: 決着ベース=成約÷(成約+失注) / 判断待ち込み=成約÷(成約+失注+口頭合意ローン待ち+判断待ち)。出どころ=_oc_all（シート直読み）
   const oc=window.__ocAll||null;
   const won=oc?(oc.closed||0):0, lost=oc?(oc.p_long||0):0, pipe=oc?(oc.p_verbal||0):0, wait=oc?(oc.p_after||0):0, held=oc?(oc.meetings||0):0;
