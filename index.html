@@ -424,7 +424,7 @@ async function loadAll(){
   const paidInfo=paidRow?{paid:paidRow.p_after||0, wait:paidRow.p_long||0, late:Math.round(paidRow.close_rate||0),
     done:paidRow.target_meetings||0, future:paidRow.target_deals||0, cross:Math.round(paidRow.achieve_rate||0),
     // 残弾（キャンセル除く・今日の終了分は実施済み側）: left=今日の残り+明日以降 / todayLeft / future2=明日以降 / todayDone / cancelled
-    left:paidRow.meetings||0, todayLeft:paidRow.closed||0, future2:paidRow.verbal_closed||0, todayDone:Math.round(paidRow.verbal_rate||0), cancelled:paidRow.instant||0}:null;
+    left:paidRow.meetings||0, todayLeft:paidRow.closed||0, future2:paidRow.verbal_closed||0, todayDone:Math.round(paidRow.verbal_rate||0), cancelled:paidRow.instant||0, nextMonth:paidRow.p_verbal||0}:null;
   window.__statsAll=statsAll;
   const stats=statsAll.filter(r=>!String(r.closer_id||'').startsWith('_')); // 合成行(_sheet_paid/_oc_*)は除外
 
@@ -485,7 +485,7 @@ function renderMain(now,curYm,actual,meet,apptCount,stock,paidInfo){
       for(let dd=now.getDate(); dd<=dim; dd++){ const k=String(dd).padStart(2,'0'); const r=SA.find(x=>x.closer_id==='_apt_'+k && x.ym===curYm); if(r && r.meetings) days.push(`${dd}日${r.meetings}`); }
       const VIA={she:'SHE',famm:'famm',ad:'広告',abcash:'ABCash',lili:'LiLI',bucket:'BUCKET LIST',youtube:'YouTube',im:'IM',own:'自社',other:'その他'};
       const vias=Object.keys(VIA).map(k=>{ const r=SA.find(x=>x.closer_id==='_aptv_'+k && x.ym===curYm); return (r && r.meetings)?`${VIA[k]}${r.meetings}`:null; }).filter(Boolean);
-      es.textContent=`今日あと${paidInfo.todayLeft}件・明日以降${paidInfo.future2}件`+(days.length?`／日別 ${days.join('・')}`:'')+(vias.length?`／経路 ${vias.join('・')}`:'');
+      es.textContent=`今月の残り。今日あと${paidInfo.todayLeft}件・明日以降${paidInfo.future2}件`+(paidInfo.nextMonth?`／来月の予約 ${paidInfo.nextMonth}件（残弾には含めない）`:'')+(days.length?`／日別 ${days.join('・')}`:'')+(vias.length?`／経路 ${vias.join('・')}`:'');
     } else { el.textContent='–'; es.textContent='同期待ち'; }
   }catch(e){}
   // クローザー空き枠（closer-free-slots GAS の合成行 _fs_all_<MMDD>・今日から7日・Googleカレンダー＋シート面談予定）
