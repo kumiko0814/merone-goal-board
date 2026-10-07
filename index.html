@@ -532,6 +532,14 @@ function renderMain(now,curYm,actual,meet,apptCount,stock,paidInfo){
     }
     pd.textContent=t;
   }
+  // 仕入れコース（19.6万）は本コースの成約に入れず別枠で表示（2026-10-07 くみこ指示）
+  {
+    const sr=statsAll.find(r=>r.closer_id==='_shiire' && r.ym===curYm);
+    let el=document.getElementById('mShiire');
+    if(!el){ const anchor=document.getElementById('mPaid'); el=document.createElement('div'); el.id='mShiire'; el.style.cssText='margin-top:6px;font-size:13px;font-weight:800;color:var(--navy,#1f3a5f)'; if(anchor&&anchor.parentNode) anchor.parentNode.insertBefore(el,anchor.nextSibling); }
+    const n=sr?(sr.closed||0):0, yen=sr?(sr.target_deals||0):0;
+    el.textContent=`仕入れコース（別枠）${n}件・${Math.round(yen/10000*10)/10}万円 ※上の成約数には含みません`;
+  }
   const dim=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
   const day=now.getDate(), remain=dim-day+1;
   const left=Math.max(0,total-actual);
