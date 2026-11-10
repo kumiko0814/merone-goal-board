@@ -1,0 +1,887 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>目標ボード｜Merone</title>
+<style>
+:root{
+  --bg:#fdeef3; --bg2:#faf1f6; --pinkbg:#fbe7ef; --paper:#ffffff;
+  --plum:#574a58; --plum2:#463a48; --pink:#f0a2c5; --pinkd:#c66f96;
+  --blue:#8fbfe6; --blued:#5f97be; --ink:#4f454e; --sub:#9a8993; --line:#f3e3ec;
+  --grad:linear-gradient(135deg,#F5A6C8,#B98BEA);
+  --grad-lav:linear-gradient(150deg,#C99BE8,#9E77D6);
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent; margin:0; padding:0;}
+html{-webkit-text-size-adjust:100%;}
+body{
+  background:linear-gradient(180deg,#fdf1f4 0%,#fbe9ee 55%,#f3f0f7 100%);
+  color:var(--ink); line-height:1.8; letter-spacing:.01em;
+  font-family:"Yu Gothic","YuGothic","游ゴシック","Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP",sans-serif;
+  display:flex; justify-content:center; overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;}
+img{max-width:100%; height:auto;}
+.app{width:100%; max-width:480px; min-height:100vh; padding-bottom:70px; position:relative;}
+
+.hud{display:flex; align-items:center; gap:10px; padding:12px 16px; background:var(--paper);
+  border-bottom:1px solid var(--line); position:sticky; top:0; z-index:20;
+  box-shadow:0 6px 18px -14px rgba(87,74,88,.35);}
+.hud img{width:86px; display:block;}
+.hud .ttl{font-size:12.5px; font-weight:800; color:var(--plum2); letter-spacing:.06em;}
+.hud .who{margin-left:auto; font-size:10.5px; font-weight:800; color:#fff; background:var(--grad);
+  border-radius:999px; padding:5px 12px; letter-spacing:.03em;}
+
+.card{background:var(--paper); border:1px solid var(--line); border-radius:20px;
+  box-shadow:0 12px 28px -18px rgba(87,74,88,.35);}
+section{padding:14px 16px 0;}
+.sec-h{display:flex; align-items:center; gap:8px; margin:4px 2px 8px;}
+.sec-h .tag{font-size:10px; font-weight:800; letter-spacing:.14em; color:#fff; background:var(--grad-lav);
+  border-radius:999px; padding:3px 12px;}
+.sec-h b{font-size:14px; color:var(--plum2); letter-spacing:.03em;}
+.sec-h small{font-size:10px; color:var(--sub); font-weight:600; margin-left:auto;}
+
+/* hero */
+.hero{padding:16px 16px 0;}
+.hero .in{padding:16px; display:flex; gap:12px; align-items:center;}
+.hero .ava{flex:none; width:60px; height:60px; border-radius:999px; overflow:hidden;
+  border:3px solid #fff; box-shadow:0 6px 16px rgba(198,111,150,.28); background:#fff;}
+.hero .ava img{width:100%; height:100%; object-fit:cover;}
+.hero p{font-size:12.5px; color:var(--plum2); font-weight:700;}
+.hero small{font-size:10.5px; color:var(--sub); font-weight:600;}
+
+/* main number */
+.main .in{padding:20px 18px 18px; text-align:center;}
+.main .label{font-size:11px; font-weight:800; letter-spacing:.2em; color:var(--pinkd);}
+.main .big{font-size:52px; font-weight:800; color:var(--plum2); line-height:1.15; letter-spacing:.02em;}
+.main .big small{font-size:20px; color:var(--sub); font-weight:800;}
+.main .bar{height:14px; border-radius:20px; background:#f6e7ef; overflow:hidden; margin:12px 4px 8px;}
+.main .fill{height:100%; width:0%; background:linear-gradient(90deg,var(--blue),var(--pink)); border-radius:20px; transition:width .5s;}
+.main .pace{font-size:12.5px; color:var(--plum2); font-weight:700;}
+.main .pace b{color:var(--pinkd); font-size:15px;}
+.main .cheer{margin-top:8px; font-size:11.5px; color:var(--sub); font-weight:600;}
+.main .stats{display:flex; gap:8px; margin-top:12px;}
+.main .stat{flex:1; background:var(--bg2); border:1px solid var(--line); border-radius:14px; padding:9px 6px;}
+.main .stat b{display:block; font-size:20px; color:var(--plum2); line-height:1.3;}
+.main .stat b small{font-size:11px; color:var(--sub);}
+.main .stat span{font-size:10px; color:var(--sub); font-weight:700;}
+.main .stat .sub2{display:block; font-size:9.5px; color:var(--sub); font-weight:600; margin-top:1px;}
+
+/* calendar */
+.cal{padding:14px 8px 12px;}
+.cal .grid{display:grid; grid-template-columns:repeat(7,1fr); gap:3px;}
+.cal .dow{font-size:9.5px; font-weight:800; color:var(--sub); text-align:center; padding:2px 0;}
+.cal .d{border:1px solid var(--line); border-radius:9px; min-height:66px; padding:3px 1px 2px; text-align:center; background:#fffdfd; position:relative; overflow:hidden;}
+.cal .d.blank{border:none; background:transparent;}
+.cal .d .n{font-size:10.5px; font-weight:800; color:var(--plum2); line-height:1.25;}
+.cal .d .t{font-size:8.5px; color:var(--sub); font-weight:700; line-height:1.25;}
+.cal .d.ok{background:var(--pinkbg); border-color:#f2cede;}
+.cal .d.ok .t{color:var(--pinkd);}
+.cal .d.soon{background:#eef5fb; border-color:#d8e8f5;}
+.cal .d.today{outline:2.5px solid; outline-color:#c99be8; outline-offset:1px;}
+.cal .wk{grid-column:1 / -1; background:#fdf5dc; border:1px solid #f3e6bd; border-radius:9px;
+  padding:4px 8px; font-size:10px; font-weight:800; color:#7a6a3a; text-align:left; line-height:1.6;}
+.cal .wk b{color:#a05c78;}
+.cal .ev{font-size:7.5px; font-weight:800; color:#fff; border-radius:5px; padding:1px 2px; line-height:1.4; margin:1px auto 0; max-width:95%;}
+.cal .evn{font-size:8px; font-weight:800; color:var(--pinkd); line-height:1.3;}
+.cal .legend{display:flex; gap:10px; justify-content:center; margin-top:8px; font-size:9.5px; color:var(--sub); font-weight:700;}
+.cal .legend i{font-style:normal; display:inline-flex; align-items:center; gap:4px;}
+.cal .legend .sw{width:10px; height:10px; border-radius:3px; display:inline-block;}
+
+/* channels */
+.chs{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+.ch{padding:11px 12px; }
+.ch .nm{font-size:11px; font-weight:800; color:var(--plum2);}
+.ch .num{font-size:19px; font-weight:800; color:var(--plum2); margin-top:2px;}
+.ch .num small{font-size:11px; color:var(--sub);}
+.ch .mini{height:6px; border-radius:20px; background:#f6e7ef; overflow:hidden; margin-top:6px;}
+.ch .mini i{display:block; height:100%; background:var(--grad); border-radius:20px;}
+.ch .nt{font-size:9px; color:var(--sub); margin-top:4px; font-weight:600;}
+
+/* quarter */
+.q .in{padding:16px;}
+.q .row{display:flex; align-items:baseline; gap:8px;}
+.q .row b{font-size:24px; color:var(--plum2);}
+.q .row span{font-size:11px; color:var(--sub); font-weight:700;}
+.q .bar{height:12px; border-radius:20px; background:#f6e7ef; overflow:hidden; margin-top:8px; position:relative;}
+.q .bar i{position:absolute; top:0; bottom:0; border-radius:20px;}
+.q .marker{position:absolute; top:-3px; bottom:-3px; width:2px; background:#c99be8;}
+.q .months{display:flex; gap:6px; margin-top:10px;}
+.q .m{flex:1; text-align:center; background:var(--bg2); border:1px solid var(--line); border-radius:12px; padding:7px 4px;}
+.q .m b{display:block; font-size:13px; color:var(--plum2);}
+.q .m span{font-size:9.5px; color:var(--sub); font-weight:700;}
+
+/* closers */
+.chips{display:flex; flex-wrap:wrap; gap:6px;}
+.chips i{font-style:normal; font-size:11px; font-weight:700; color:var(--plum);
+  background:var(--paper); border:1px solid var(--line); border-radius:999px; padding:5px 12px;}
+.chips i b{color:var(--pinkd);}
+
+/* footer chara */
+.foot{text-align:center; padding:26px 16px 10px;}
+.foot img{height:130px; width:auto;}
+.foot p{font-size:12px; color:var(--plum2); font-weight:700; margin-top:6px;}
+.foot small{display:block; font-size:10px; color:var(--sub); margin-top:4px; font-weight:600;}
+
+/* login */
+.login{padding:30px 16px;}
+.login .in{padding:24px 18px; text-align:center;}
+.login h2{font-size:15px; color:var(--plum2); margin-bottom:6px;}
+.login p{font-size:11.5px; color:var(--sub); margin-bottom:12px;}
+.login input{width:100%; border:1.5px solid var(--line); background:#fffdfd; border-radius:13px;
+  padding:12px 13px; font-size:15px; color:var(--ink); font-family:inherit; margin-bottom:10px;}
+.login input:focus{outline:none; border-color:var(--pink); box-shadow:0 0 0 3px rgba(240,162,197,.18);}
+.btn{display:block; width:100%; border:none; cursor:pointer; padding:14px; border-radius:14px;
+  font-size:14px; font-weight:800; font-family:inherit; letter-spacing:.05em;
+  background:var(--grad); color:#fff; box-shadow:0 10px 24px rgba(185,139,234,.35);}
+.btn:active{transform:translateY(1px);}
+.hint{font-size:10.5px; color:var(--sub); margin-top:10px; line-height:1.9;}
+
+/* misc */
+.note{font-size:10.5px; color:var(--sub); margin:8px 4px 0; font-weight:600;}
+#bugL{position:fixed; right:10px; bottom:10px; font-size:10px; color:var(--sub); background:rgba(255,255,255,.9);
+  border:1px solid var(--line); border-radius:999px; padding:5px 11px; cursor:pointer; z-index:30; font-weight:700;}
+#bugM{display:none; position:fixed; inset:0; background:rgba(70,58,72,.45); z-index:40; align-items:center; justify-content:center; padding:20px;}
+#bugM.on{display:flex;}
+#bugM .box{background:#fff; border-radius:18px; padding:18px; width:100%; max-width:400px;}
+#bugM textarea{width:100%; min-height:90px; border:1.5px solid var(--line); border-radius:12px; padding:10px; font-size:14px; font-family:inherit; margin:10px 0;}
+#bugM .row{display:flex; gap:8px;}
+#bugM .row button{flex:1; padding:11px; border-radius:12px; border:none; font-family:inherit; font-weight:800; cursor:pointer;}
+#bugM .cancel{background:var(--bg2); color:var(--plum);}
+#bugM .send{background:var(--grad); color:#fff;}
+.skel{color:var(--sub); font-size:12px; text-align:center; padding:30px 0;}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="hud">
+    <img src="reche-logo-transparent.png" alt="Re:che">
+    <span class="ttl">目標ボード</span>
+    <span class="who" id="who">…</span>
+  </div>
+
+  <div id="loginView" style="display:none">
+    <div class="login">
+      <div class="card in">
+        <h2>メールでログイン</h2>
+        <p>クローザーボードと同じメールアドレスでOKです</p>
+        <input id="email" type="email" placeholder="you@merone.co.jp" autocomplete="email">
+        <button class="btn" onclick="doLogin()">ログインリンクを送る</button>
+        <div class="hint" id="loginHint">届いたメールのリンクを開くと、この画面に戻ります</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="boardView" style="display:none">
+
+    <div class="hero">
+      <div class="card in">
+        <div class="ava"><img src="kumiko-head-avatar.png" alt=""></div>
+        <div>
+          <p id="heroMsg">今日はここだけ見れば大丈夫◎</p>
+          <small id="heroDate"></small>
+        </div>
+      </div>
+    </div>
+
+    <section>
+      <div class="sec-h"><span class="tag">GOAL</span><b>今月の成約（入金ベース）</b><small id="mainSrc">今月お金が入った件数</small></div>
+      <div class="card main">
+        <div class="in">
+          <div class="label" id="mLabel">9月の目標</div>
+          <div class="big"><span id="mNow">–</span><small> / <span id="mTarget">–</span>件</small></div>
+          <div class="bar"><div class="fill" id="mFill"></div></div>
+          <div class="pace" id="mPace">読み込み中…</div>
+          <div class="stats">
+            <div class="stat"><span>面談のたくわえ</span><b id="sMtg">–</b><span class="sub2" id="sMtgSub"></span></div>
+            <div class="stat"><span>口頭合意（ローン申請中含む）</span><b id="sPipe">–</b><span class="sub2" id="sPipeSub"></span></div>
+          </div>
+          <div class="stats" style="margin-top:8px">
+            <div class="stat"><span>これからの面談（残弾）</span><b id="sLeft">–</b><span class="sub2" id="sLeftSub">同期待ち</span></div>
+            <div class="stat"><span>仕入れコース（別枠）</span><b id="sShiire">–</b><span class="sub2" id="sShiireSub">上の成約数には含みません</span></div>
+          </div>
+          <div class="stats" style="margin-top:8px">
+            <div class="stat"><span>成約率（決着ベース）</span><b id="sRate">–</b><span class="sub2" id="sRateSub"></span></div>
+            <div class="stat"><span>成約率（判断待ち込み）</span><b id="sRateInc">–</b><span class="sub2" id="sRateIncSub"></span></div>
+          </div>
+          <div class="sub2" id="mStock" style="display:none; margin-top:8px; text-align:center;"></div>
+          <div class="sub2" id="mPaid" style="display:none; margin-top:6px; text-align:center;"></div>
+          <div class="cheer" id="mCheer"></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="sec-h"><span class="tag">DEADLINE</span><b>逆算ライン</b><small>実測LT中央値から逆算</small></div>
+      <div class="card" style="padding:14px 16px">
+        <div style="display:flex; align-items:center; justify-content:center; gap:6px; flex-wrap:wrap; font-size:11px; font-weight:800; color:var(--plum2)">
+          <span style="background:var(--bg2); border:1px solid var(--line); border-radius:999px; padding:4px 10px">友だち追加</span>
+          <span style="color:var(--sub)">→12日→</span>
+          <span style="background:var(--bg2); border:1px solid var(--line); border-radius:999px; padding:4px 10px">面談</span>
+          <span style="color:var(--sub)">→1日→</span>
+          <span style="background:var(--grad); color:#fff; border-radius:999px; padding:4px 10px">入金</span>
+        </div>
+        <div id="rvLines" style="margin-top:10px; font-size:12.5px; color:var(--plum2); font-weight:700; text-align:center; line-height:2"></div>
+        <div id="rvMtg" style="margin-top:6px; font-size:11px; color:var(--sub); font-weight:600; text-align:center"></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="sec-h"><span class="tag">CALENDAR</span><b>いつまでに何件？</b><small>数字は「その日までの目安」</small></div>
+      <div class="card cal">
+        <div class="grid" id="calGrid"></div>
+        <div class="legend">
+          <i><span class="sw" style="background:#fbe7ef; border:1px solid #f2cede"></span>目安クリア</i>
+          <i><span class="sw" style="background:#eef5fb; border:1px solid #d8e8f5"></span>これから追いつく</i>
+          <i><span class="sw" style="background:#fff; outline:2px solid #c99be8"></span>今日</i>
+        </div>
+        <div style="font-size:10px; color:var(--sub); font-weight:600; line-height:1.9; margin-top:8px; padding:0 4px">
+          マスの数字＝その日までの<b>成約の累計めやす</b>／勉強会マスの「面談◯件とる」＝<b>その会でつくる面談数の目標</b>（その時点の必達数ではありません）<br>
+          追加〆＝友だち追加の締切／<b>予約〆＝月内着金に効く面談予約の締切</b>／実施〆＝月内着金の安全圏／限界＝これ以降は入金が翌月
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="sec-h"><span class="tag">EVENT</span><b>勉強会から逆算</b><small>各会で面談を何件つくるか</small></div>
+      <div id="evList"></div>
+    </section>
+
+    <section>
+      <div class="sec-h"><span class="tag">CHANNEL</span><b>どこから何件？</b><small id="chSrc"></small></div>
+      <div class="chs" id="chGrid"></div>
+      <div class="note" id="chNote"></div>
+    </section>
+
+    <section>
+      <div class="sec-h"><span class="tag">OTHER</span><b>その他導線</b><small>おとな女子・はるもり等</small></div>
+      <div class="card" style="padding:12px 14px" id="otherBox"></div>
+    </section>
+
+    <section>
+      <div class="sec-h"><span class="tag">LIST</span><b>今月の面談予定（明細）</b><small>2時間ごと自動同期</small></div>
+      <div class="card" style="padding:6px 12px; max-height:320px; overflow-y:auto" id="apptList"></div>
+    </section>
+
+    <section>
+      <div class="sec-h"><span class="tag">ROAS</span><b>広告の費用対効果</b><small>目標500%</small></div>
+      <div class="card" style="padding:14px 16px" id="roasBox"></div>
+    </section>
+
+    <section>
+      <div class="sec-h"><span class="tag">QUARTER</span><b>Q全体（9〜11月）</b></div>
+      <div class="card q">
+        <div class="in">
+          <div class="row"><b id="qNow">–</b><span id="qLbl">/ 267件（COM）・挑戦目標 350件（CHA）</span></div>
+          <div class="bar" id="qBar"><i id="qFill" style="left:0; width:0%; background:linear-gradient(90deg,#8fbfe6,#f0a2c5)"></i><div class="marker" id="qMarker"></div></div>
+          <div class="months" id="qMonths"></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="sec-h"><span class="tag">RESULT</span><b>今月の面談結果</b><small>実施済み面談の行き先・シート直読み</small></div>
+      <div class="card" style="padding:12px 14px">
+        <div id="ocHead" style="font-size:12px; color:var(--plum2); font-weight:700; line-height:1.8"></div>
+        <div style="overflow-x:auto; margin-top:8px">
+          <table id="ocTable" style="width:100%; border-collapse:collapse; font-size:11px; font-weight:700; color:var(--plum)"></table>
+        </div>
+        <div id="ocNote" style="font-size:10px; color:var(--sub); font-weight:600; margin-top:8px; line-height:1.8"></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="sec-h"><span class="tag">TEAM</span><b>今月のクローザー</b></div>
+      <div class="chips" id="closerChips"><span class="skel">読み込み中…</span></div>
+    </section>
+
+    <section>
+      <div class="sec-h"><span class="tag">MEMO</span><b>実測リードタイム</b><small>2026年3〜8月・成約264名／予約通知222件</small></div>
+      <div class="card" style="padding:12px 14px; font-size:11px; color:var(--plum2); font-weight:600; line-height:2">
+        面談→入金：全体 中央値0日・平均2.4日（91%が7日以内）<br>
+        　ABCash 中央値1日・平均3.5日（いちばん遅い）／famm 0日・2.2日／SHE 0日・1.5日<br>
+        予約→面談実施：中央値6日<br>
+        勉強会→予約：8日間入り続く（初動3日で約6割）<br>
+        <b style="color:var(--pinkd)">月末3日以内の面談は31%が翌月入金</b>（ABCashは38%）
+      </div>
+    </section>
+
+    <div class="foot">
+      <img src="kumiko-pink-peace.png" alt="">
+      <p id="footMsg">数字は毎時、自動でここに集まります</p>
+      <small>見に来ない日があっても大丈夫。異常があるときだけお知らせします</small>
+    </div>
+  </div>
+
+  <div id="setupView" style="display:none">
+    <div class="login"><div class="card in">
+      <h2>目標データが未設定です</h2>
+      <p>setup.html のSQLをSupabaseで1回実行すると、目標が表示されます</p>
+      <a class="btn" href="setup.html" style="text-decoration:none">セットアップ手順を開く</a>
+    </div></div>
+  </div>
+
+  <span id="bugL" onclick="document.getElementById('bugM').classList.add('on')">🍺 不具合を報告</span>
+  <div id="bugM"><div class="box">
+    <b style="color:var(--plum2); font-size:13.5px">不具合・気づいたことを教えてください</b>
+    <textarea id="bugT" placeholder="例）カレンダーの数字がずれている"></textarea>
+    <div class="row">
+      <button class="cancel" onclick="document.getElementById('bugM').classList.remove('on')">閉じる</button>
+      <button class="send" onclick="sendBug()">送信</button>
+    </div>
+  </div></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SB_URL='https://inrvprlyobghviklulcv.supabase.co';
+const SB_KEY='sb_publishable_ZrCNcsRHMci-l7Fns8QtIA_X22XZGJp';
+function showFatal(msg){
+  const el=document.createElement('div');
+  el.style.cssText='margin:30px 16px;padding:18px;background:#fff;border:1px solid #f3e3ec;border-radius:16px;font-size:12.5px;color:#574a58;line-height:1.9;';
+  el.innerHTML='<b>読み込みでつまずきました</b><br>'+msg+'<br><br><a href="javascript:location.reload()" style="color:#c66f96;font-weight:800">もう一度読み込む</a>';
+  document.querySelector('.app').appendChild(el);
+}
+window.addEventListener('error',e=>{ if(!document.querySelector('.app > div[style]')) showFatal('エラー: '+(e.message||'不明')+'<br>🍺から報告してもらえると助かります'); });
+let sb=null;
+try{ sb=supabase.createClient(SB_URL,SB_KEY); }
+catch(e){ showFatal('通信ライブラリを読み込めませんでした。Safari や Chrome で開き直してみてください'); }
+
+const CH_ALIAS={'famm':'Famm','abcash':'ABCash','she':'SHE','スマセル':'スマセル','広告':'広告','youtube':'YouTube','bucket list':'BUCKET LIST','バケットリスト':'BUCKET LIST','インタレストマッチ':'インタレストマッチ','シェアフル':'シェアフル'};
+// 実測LT（プロラインダッシュボード 2026年面談スコープ・中央値・スマセル/Li-Li除外）
+// 面談LT=友だち追加→面談実施12日(n=471) / 入金LT=面談実施→初回入金1日(n=332) / 成約率=面談実施→成約 約55%(ABCash/famm/SHE実測加重)
+// 全て実測値（2026年6〜8月・Slack予約通知222件＋成約者264名の入金日から算出）
+// optToMtg=友だち追加→面談実施12日(中央値) / evToBook=勉強会後に予約が入り続く実測窓8日(初動3日で約6割・7〜9日目まで継続)
+// bookToMtg=予約→面談実施6日(中央値) / mtgToPay=面談→入金 中央値0〜1日・月末3日以内の面談は31%が翌月着金→payBuffer3日
+const LT={optToMtg:12, mtgToPay:1, payBuffer:3, evToBook:8, bookToMtg:6, closeRate:0.55};
+// チャネル別の実測成約率（面談→成約）
+const CLOSE_RATE={'ABCash':0.60,'Famm':0.48,'SHE':0.56};
+// 勉強会日程（開催告知済みの公開情報のみ。日時が決まったらここに追記）
+const EVENTS=[
+  {d:'2026-09-10',time:'21:00',ch:'Famm',short:'famm勉',color:'#d9a94a'},
+  {d:'2026-09-13',time:'21:00',ch:'ABCash',short:'ABC勉',color:'#8fbfe6'},
+  {d:'2026-09-15',time:'20:00',ch:'SHE',short:'SHE勉',color:'#B98BEA'},
+  {d:'2026-09-17',time:'9:30',ch:'Famm',short:'famm勉',color:'#d9a94a'},
+  {d:'2026-09-25',time:'',ch:'LiLI',short:'LiLI勉',color:'#7fc4b8'}   // 9/25はABCash中止→LiLI勉強会に変更（くみこ2026-09-11・時刻未定）
+];
+const ALWAYS_ON=['広告','YouTube','インタレストマッチ']; // 常時導線
+// BUCKET LIST=勉強会ではなくYouTuber/インスタグラマーによるSNS紹介ルート。撮影9/18→SNS投稿→LINEオプト→面談。着地は10月
+const SNS_ROUTE=[{ch:'BUCKET LIST',note:'YouTuber・インスタグラマーがSNSで紹介する導線。撮影 9/18 → 投稿 → LINE登録 → 面談。着地は<b>10月</b>の見込み（9月成約には基本乗りません）'}];
+const AUTO_CH=new Set(['Famm','ABCash','SHE','スマセル','シェアフル']); // sc_dealsから実績が取れるチャネル
+
+let targets={}, qTargets={}, session=null, currentEmail='', booted=false;
+const CLOSER_NAMES={};
+
+function ym(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function today(){ return new Date(); }
+
+if(sb) init();
+async function init(){
+  try{
+    const {data:{session:s}}=await sb.auth.getSession();
+    session=s;
+    if(!s){ document.getElementById('loginView').style.display='block'; document.getElementById('who').textContent='未ログイン'; booted=true; return; }
+    currentEmail=s.user.email||'';
+    document.getElementById('who').textContent=currentEmail.split('@')[0];
+    await loadAll();
+  }catch(e){ showFatal('データ取得に失敗しました（'+(e.message||e)+'）'); }
+  booted=true;
+}
+async function doLogin(){
+  const email=document.getElementById('email').value.trim();
+  if(!email) return;
+  const {error}=await sb.auth.signInWithOtp({email, options:{emailRedirectTo:'https://kumiko0814.github.io/sales-closer-board/'}});
+  document.getElementById('loginHint').textContent=error?('送信できませんでした: '+error.message):'メールを送りました。届いたリンクを開くとクローザーボードが表示されるので、そのあと目標ボードを開き直してください。ログイン済みになっています';
+}
+if(sb) sb.auth.onAuthStateChange((ev,s)=>{ if(ev==='SIGNED_IN' && booted && s && !session){ location.reload(); } });
+
+async function loadAll(){
+  const now=today(), curYm=ym(now);
+  // 目標
+  const {data:tg,error:tgErr}=await sb.from('gb_targets').select('*');
+  if(tgErr||!tg||!tg.length){ document.getElementById('setupView').style.display='block'; return; }
+  tg.forEach(r=>{
+    if(r.ym.includes('Q')) qTargets[r.channel]=r.target;
+    else{ targets[r.ym]=targets[r.ym]||{}; targets[r.ym][r.channel]=r.target; }
+  });
+  document.getElementById('boardView').style.display='block';
+
+  // 実績（3系統・取れたものだけ使う）
+  const q3=['2026-09','2026-10','2026-11'];
+  const nextYm=(()=>{const d2=new Date(now.getFullYear(),now.getMonth()+1,1);return ym(d2);})();
+  const [ms,rp,dl,ap]=await Promise.all([
+    sb.from('sc_month_stats').select('*').in('ym',q3),
+    sb.from('sc_reports').select('report_date,closed,instant_close').gte('report_date',curYm+'-01'),
+    sb.from('sc_deals').select('alliance,status,deal_date,updated_at').gte('deal_date',curYm+'-01'),
+    sb.from('sc_appointments').select('start_at,alliance,status').gte('start_at',curYm+'-01').lt('start_at',nextYm+'-01')
+  ]);
+  const statsAll=ms.data||[], reports=rp.data||[], deals=dl.data||[];
+  window.__adSpend=statsAll.find(r=>r.closer_id==='_ad_spend' && r.ym===curYm)||null; // 広告費(Meta API)と広告経由入金の合成行
+  const appts=(ap.data||[]).filter(a=>!String(a.status||'').includes('キャンセル'));
+
+  // '_sheet_paid' はシートRAWDATA直読みの集計を運ぶ合成行
+  // p_after=入金確認済み/p_long=入金待ち/close_rate=待ちのうち4日以上/target_meetings=当月実施済み面談/target_deals=今後の予約
+  const paidRow=statsAll.find(r=>r.closer_id==='_sheet_paid' && r.ym===curYm);
+  const paidInfo=paidRow?{paid:paidRow.p_after||0, wait:paidRow.p_long||0, late:Math.round(paidRow.close_rate||0),
+    done:paidRow.target_meetings||0, future:paidRow.target_deals||0, cross:Math.round(paidRow.achieve_rate||0),
+    // 残弾（キャンセル除く・今日の終了分は実施済み側）: left=今日の残り+明日以降 / todayLeft / future2=明日以降 / todayDone / cancelled
+    left:paidRow.meetings||0, todayLeft:paidRow.closed||0, future2:paidRow.verbal_closed||0, todayDone:Math.round(paidRow.verbal_rate||0), cancelled:paidRow.instant||0, nextMonth:paidRow.p_verbal||0}:null;
+  window.__statsAll=statsAll;
+  const stats=statsAll.filter(r=>!String(r.closer_id||'').startsWith('_')); // 合成行(_sheet_paid/_oc_*)は除外
+
+  const monthActual={}, monthMeet={}, monthStock={}; q3.forEach(m=>{monthActual[m]=0; monthMeet[m]=0; monthStock[m]=0;});
+  // p_loan列はこのテーブルに無い（存在するのはp_verbal=口頭合意〜入金前・p_long=長期戦）。undefinedは0扱いで安全
+  stats.forEach(r=>{ monthActual[r.ym]=(monthActual[r.ym]||0)+(r.closed||0); monthMeet[r.ym]=(monthMeet[r.ym]||0)+(r.meetings||0); monthStock[r.ym]=(monthStock[r.ym]||0)+(r.p_verbal||0)+(r.p_loan||0); });
+
+  // 「今月の成約」＝今月お金が入った件数（入金ベース）。当月面談での入金(paid)＋先月までの面談で今月入金(cross)。
+  // くみこ定義: 入金＝成約。月初にシート集計表が無くてもRAWDATA直読みで必ず出す
+  if(paidInfo){ monthActual[curYm]=Math.max(monthActual[curYm]||0, (paidInfo.paid||0)+(paidInfo.cross||0)); }
+
+  // たくわえはシート直読みを正とする（sc_appointmentsは日程変更・キャンセルの残骸が過去分に残り水増しされるため）
+  const t0=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  const apptsFuture=appts.filter(a=>new Date(a.start_at)>=t0);
+  const supplyDone=paidInfo?Math.max(monthMeet[curYm]||0,paidInfo.done):(monthMeet[curYm]||0);
+  const supplyFuture=paidInfo?paidInfo.future:apptsFuture.length;
+
+  window.__ocAll=statsAll.find(r=>r.closer_id==='_oc_all' && r.ym===curYm)||null;
+  renderMain(now,curYm,monthActual[curYm]||0,supplyDone,supplyFuture,monthStock[curYm]||0,paidInfo);
+  renderReverse(now,curYm,supplyDone,supplyFuture);
+  renderCal(now,curYm,monthActual[curYm]||0,reports);
+  renderEvents(now,curYm);
+  try{ const {data:cl}=await sb.from('sc_closers').select('id,name'); (cl||[]).forEach(c=>CLOSER_NAMES[c.id]=c.name); }catch(e){}
+  renderChannels(curYm,deals);
+  renderOthers(curYm,apptsFuture,deals);
+  renderApptList(apptsFuture);
+  renderRoas(curYm,deals);
+  renderQuarter(q3,monthActual,curYm);
+  renderClosers(stats.filter(r=>r.ym===curYm));
+  renderOutcome(statsAll.filter(r=>r.ym===curYm));
+  const d=new Date();
+  let syncTxt='';
+  try{
+    const {data:sm}=await sb.from('sc_sync_meta').select('last_synced').eq('id','sheet').single();
+    if(sm&&sm.last_synced){
+      const t=new Date(sm.last_synced);
+      const ageMin=Math.round((d-t)/60000);
+      syncTxt=`｜シート同期 ${t.getHours()}:${String(t.getMinutes()).padStart(2,'0')}`+(ageMin>30?`（${ageMin}分前・遅延中）`:'');
+    }
+  }catch(e){}
+  document.getElementById('heroDate').textContent=`${d.getMonth()+1}月${d.getDate()}日（${'日月火水木金土'[d.getDay()]}）${syncTxt}`;
+}
+
+function monthTotal(m){ const t=targets[m]||{}; return Object.entries(t).filter(([k])=>!k.startsWith('AD_')).reduce((a,[,v])=>a+v,0); }
+
+function renderMain(now,curYm,actual,meet,apptCount,stock,paidInfo){
+  const total=monthTotal(curYm);
+  // 面談のたくわえ（実施済み＋設定済み予約・前月からの持ち越し含む）と今月の実測成約率
+  const needMtg=Math.ceil(total/LT.closeRate);
+  const supply=(meet||0)+(apptCount||0);
+  document.getElementById('sMtg').innerHTML=`${supply}<small> / ${needMtg}件</small>`;
+  document.getElementById('sMtgSub').textContent=`実施済み${meet||0}（今日の終了分を含む）＋これから${apptCount||0}（セールスシート直読み・キャンセル除く）`;
+  // 残弾＝これからの面談（今日の残り＋明日以降）。日別・経路別は同期の合成行 _apt_<dd> / _aptv_<slug>
+  try{ const SA=window.__statsAll||[]; const el=document.getElementById('sLeft'), es=document.getElementById('sLeftSub');
+    if(paidInfo && paidInfo.left!=null){
+      el.innerHTML=`${paidInfo.left}<small>件</small>`;
+      const days=[], dim=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+      for(let dd=now.getDate(); dd<=dim; dd++){ const k=String(dd).padStart(2,'0'); const r=SA.find(x=>x.closer_id==='_apt_'+k && x.ym===curYm); if(r && r.meetings) days.push(`${dd}日${r.meetings}`); }
+      const VIA={she:'SHE',famm:'famm',ad:'広告',abcash:'ABCash',lili:'LiLI',bucket:'BUCKET LIST',youtube:'YouTube',im:'IM',own:'自社',other:'その他'};
+      const vias=Object.keys(VIA).map(k=>{ const r=SA.find(x=>x.closer_id==='_aptv_'+k && x.ym===curYm); return (r && r.meetings)?`${VIA[k]}${r.meetings}`:null; }).filter(Boolean);
+      es.textContent=`今月の残り。今日あと${paidInfo.todayLeft}件・明日以降${paidInfo.future2}件`+(paidInfo.nextMonth?`／来月の予約 ${paidInfo.nextMonth}件（残弾には含めない）`:'')+(days.length?`／日別 ${days.join('・')}`:'')+(vias.length?`／経路 ${vias.join('・')}`:'');
+    } else { el.textContent='–'; es.textContent='同期待ち'; }
+  }catch(e){}
+  // クローザー空き枠（closer-free-slots GAS の合成行 _fs_all_<MMDD>・今日から7日・Googleカレンダー＋シート面談予定）
+  try{ const t0=new Date(); t0.setHours(0,0,0,0); let wk=0, has=false;
+    for(let i=0;i<7;i++){ const d=new Date(t0.getTime()+i*86400000); const k=String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
+      const r=statsAll.find(x=>x.closer_id==='_fs_all_'+k); if(r){ has=true; wk+=(r.meetings||0); } }
+    if(has) document.getElementById('sMtgSub').textContent+=`／クローザー空き枠 今日から7日で${wk}枠`;
+  }catch(e){}
+  // 成約率2本立て（くみこ確定）: 決着ベース=成約÷(成約+失注) / 判断待ち込み=成約÷(成約+失注+口頭合意ローン待ち+判断待ち)。出どころ=_oc_all（シート直読み）
+  const oc=window.__ocAll||null;
+  const won=oc?(oc.closed||0):0, lost=oc?(oc.p_long||0):0, pipe=oc?(oc.p_verbal||0):0, wait=oc?(oc.p_after||0):0, held=oc?(oc.meetings||0):0;
+  const dec=won+lost, inc=dec+pipe+wait;
+  if(oc && held>0){
+    document.getElementById('sRate').textContent=dec?Math.round(won/dec*100)+'%':'—';
+    document.getElementById('sRateSub').textContent=`成約${won}÷(成約${won}＋失注${lost})`;
+    document.getElementById('sRateInc').textContent=inc?Math.round(won/inc*100)+'%':'—';
+    document.getElementById('sRateIncSub').textContent=`＋口頭合意(ローン含む)${pipe}＋判断待ち${wait}も分母`;
+    const loan=oc?(oc.verbal_closed||0):0;
+    document.getElementById('sPipe').innerHTML=`${pipe}<small>件</small>`;
+    document.getElementById('sPipeSub').textContent=`口頭合意${pipe-loan}・ローン申請中${loan}／判断待ち（長期戦含む）${wait}件`;
+  }else{
+    ['sRate','sRateInc','sPipe'].forEach(id=>document.getElementById(id).textContent='—');
+    document.getElementById('sRateSub').textContent='今月の面談データ待ち（参考: 実測平均55%）';
+    document.getElementById('sRateIncSub').textContent='';
+    document.getElementById('sPipeSub').textContent='シート同期後に表示';
+  }
+  // 口頭合意・ローン待ち・判断待ちは決まった時点で上の成約数に移る（先月からの持ち越しは追客リストに載る）
+  if(pipe+wait>0){
+    const st=document.getElementById('mStock');
+    st.style.display='block';
+    st.textContent=`口頭合意（ローン申請中含む）${pipe}件と判断待ち ${wait}件は、決まると上の成約数に移ります（実測: 面談から4日以内が勝負）`;
+  }
+  // 上の大きい成約数（＝今月お金が入った件数）の内訳。10分ごとにシートRAWDATAから自動集計
+  if(paidInfo){
+    const pd=document.getElementById('mPaid');
+    pd.style.display='block';
+    let t=`内訳: 今月面談ぶん ${paidInfo.paid}件 ＋ 先月までの面談ぶん ${paidInfo.cross}件`;
+    if(paidInfo.wait>0){
+      t+=` ／ このほか入金待ち ${paidInfo.wait}件`;
+      if(paidInfo.late>0) t+=`（うち面談から4日以上 ${paidInfo.late}件）`;
+      pd.style.color='var(--pinkd)'; pd.style.fontWeight='800';
+    }else{
+      pd.style.color=''; pd.style.fontWeight='';
+    }
+    pd.textContent=t;
+  }
+  // 仕入れコース（19.6万）は本コースの成約に入れず別枠で表示（2026-10-07 くみこ指示）
+  {
+    const sr=(window.__statsAll||[]).find(r=>r.closer_id==='_shiire' && r.ym===curYm);
+    let el=document.getElementById('mShiire');
+    if(!el){ const anchor=document.getElementById('mPaid'); el=document.createElement('div'); el.id='mShiire'; el.style.cssText='margin-top:6px;font-size:13px;font-weight:800;color:var(--navy,#1f3a5f)'; if(anchor&&anchor.parentNode) anchor.parentNode.insertBefore(el,anchor.nextSibling); }
+    const n=sr?(sr.closed||0):0, yen=sr?(sr.target_deals||0):0;
+    el.textContent=`仕入れコース（別枠）${n}件・${Math.round(yen/10000*10)/10}万円 ※上の成約数には含みません`;
+    const sb2=document.getElementById('sShiire'); if(sb2) sb2.innerHTML=`${n}<small>件</small>`;
+    const ss2=document.getElementById('sShiireSub'); if(ss2) ss2.textContent=`今月の入金 ${Math.round(yen/10000*10)/10}万円（19.6万円×件数）／上の成約数には含みません`;
+  }
+  const dim=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+  const day=now.getDate(), remain=dim-day+1;
+  const left=Math.max(0,total-actual);
+  const perDay=remain>0?(left/remain):left;
+  const rate=total?Math.round(actual/total*100):0;
+  document.getElementById('mLabel').textContent=`${parseInt(curYm.slice(5))}月の目標｜達成率 ${rate}%`;
+  document.getElementById('mNow').textContent=actual;
+  document.getElementById('mTarget').textContent=total;
+  document.getElementById('mFill').style.width=Math.min(100,total?actual/total*100:0)+'%';
+  const paceEl=document.getElementById('mPace'), cheer=document.getElementById('mCheer');
+  if(left===0){
+    paceEl.innerHTML='今月の目標、達成です';
+    cheer.textContent='おつかれさまでした。ここからは全部が上積みです✨';
+  }else{
+    paceEl.innerHTML=`あと <b>${left}件</b>｜残り${remain}日 → 1日 <b>${perDay.toFixed(1)}件</b> ペース`;
+    const idealCum=Math.round(total*day/dim);
+    cheer.textContent = actual>=idealCum ? 'いいペースです。この調子でいきましょう✨' : `今日の目安まであと${idealCum-actual}件。今日の1件が月末を軽くします`;
+  }
+}
+
+function deadlines(now){
+  const dim=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+  const mtgD=dim-LT.mtgToPay;            // 実施の限界（中央値1日で月内入金ぎりぎり）
+  const safeD=dim-LT.payBuffer;          // 実施の安全圏（月末3日以内の面談は31%が翌月着金＝実測）
+  const bookD=safeD-LT.bookToMtg;        // 月内着金に効く予約のライン（予約→実施 中央値6日）
+  const optD=Math.max(1,mtgD-LT.optToMtg);
+  return {dim,mtgD,safeD,bookD,optD};
+}
+function renderReverse(now,curYm,actualMeet,apptCount){
+  const total=monthTotal(curYm), m=parseInt(curYm.slice(5));
+  const {mtgD,safeD,optD}=deadlines(now);
+  const needMtg=Math.ceil(total/LT.closeRate);
+  const day=now.getDate();
+  const lines=[];
+  const optLeft=optD-day, safeLeft=safeD-day;
+  const {bookD}=deadlines(now);
+  lines.push(`友だち追加は <b style="color:var(--pinkd)">${m}/${optD}まで</b>${optLeft>=0?`（あと${optLeft}日）`:'（今月分は締切済み→来月分の仕込みへ）'}`);
+  lines.push(`面談予約は <b style="color:var(--pinkd)">${m}/${bookD}まで</b>が月内着金圏（予約→実施 中央値6日）`);
+  lines.push(`面談実施は <b style="color:var(--pinkd)">${m}/${safeD}までが安全圏</b>${safeLeft>=0?`（あと${safeLeft}日）`:'（安全圏は終了）'}`);
+  lines.push(`<span style="font-size:11px; color:var(--sub)">月末3日以内の実施は31%が翌月着金（実測）。${m}/${safeD+1}〜${mtgD}は要注意</span>`);
+  document.getElementById('rvLines').innerHTML=lines.join('<br>');
+  const supply=actualMeet+(apptCount||0);   // 実施済み＋設定済み（前月勉強会からの持ち越し予約を含む）
+  const mtgLeftCnt=Math.max(0,needMtg-supply);
+  const safeDays=Math.max(0,safeD-day);
+  const perDay=safeDays>0?(mtgLeftCnt/safeDays).toFixed(1):mtgLeftCnt;
+  document.getElementById('rvMtg').innerHTML=`成約${total}件には面談 約${needMtg}件（成約率55%実測）<br>実施済み ${actualMeet}件 ＋ 設定済みの予約 ${apptCount||0}件 ＝ 見込み ${supply}件 → <b style="color:var(--pinkd)">あと${mtgLeftCnt}件</b>（安全圏内なら1日${perDay}件）`;
+}
+// 勉強会ごとの必要面談数（カレンダーとカードで共用）
+function eventNeeds(now,curYm){
+  const t=targets[curYm]||{}, {mtgD}=deadlines(now);
+  const byCh={};
+  EVENTS.filter(ev=>ev.d.startsWith(curYm)).forEach(ev=>{ (byCh[ev.ch]=byCh[ev.ch]||[]).push(ev); });
+  const out=[];
+  Object.entries(byCh).forEach(([ch,evs])=>{
+    const goal=t[ch]||0;                       // 目標チャネル外（LiLI等）は goal=0 → need=null で「目標外」表示
+    const rate=CLOSE_RATE[ch]||LT.closeRate;
+    const needTotal=goal?Math.ceil(goal/rate):null;
+    evs.sort((a,b)=>a.d.localeCompare(b.d)).forEach(ev=>{
+      const day=parseInt(ev.d.slice(8));
+      const {bookD}=deadlines(now);
+      out.push({...ev, day, need:(needTotal===null?null:Math.ceil(needTotal/evs.length)), goal, rate, count:evs.length, win:mtgD-day,
+        bookWin:day+LT.evToBook,                       // 実測: 予約が入り続く窓の終わり
+        bookBy:Math.min(day+LT.evToBook,bookD)});      // 月内着金に効く予約ライン
+    });
+  });
+  return out;
+}
+
+function renderCal(now,curYm,actual,reports){
+  const y=now.getFullYear(), m=now.getMonth();
+  const dim=new Date(y,m+1,0).getDate(), first=new Date(y,m,1).getDay();
+  const total=monthTotal(curYm);
+  const {mtgD,safeD,bookD,optD}=deadlines(now);
+  const needMtg=Math.ceil(total/LT.closeRate);
+  const evs=eventNeeds(now,curYm);
+  const evByDay={}; evs.forEach(ev=>{ (evByDay[ev.day]=evByDay[ev.day]||[]).push(ev); });
+  // 日別実績（sc_reportsの成約+即決）→累積
+  const daily={};
+  reports.forEach(r=>{ const d=parseInt((r.report_date||'').slice(8)); if(d) daily[d]=(daily[d]||0)+(r.closed||0)+(r.instant_close||0); });
+  let cum=0; const cumActual={};
+  for(let d=1; d<=dim; d++){ cum+=(daily[d]||0); cumActual[d]=cum; }
+  const reportsTotal=cum;
+  const g=document.getElementById('calGrid');
+  g.innerHTML='';
+  '日月火水木金土'.split('').forEach(w=>{ const e=document.createElement('div'); e.className='dow'; e.textContent=w; g.appendChild(e); });
+  const weekBar=(satDay)=>{
+    const end=Math.min(satDay,dim);
+    const cumC=Math.round(total*end/dim);
+    const cumM=Math.round(needMtg*Math.min(end,mtgD)/mtgD);
+    const e=document.createElement('div'); e.className='wk';
+    e.innerHTML=`〜${m+1}/${end}までの目標　成約 <b>${cumC}件</b> ／ 面談 <b>${cumM}件</b>`;
+    g.appendChild(e);
+  };
+  for(let i=0;i<first;i++){ const e=document.createElement('div'); e.className='d blank'; g.appendChild(e); }
+  for(let d=1;d<=dim;d++){
+    const dow=(first+d-1)%7;
+    const e=document.createElement('div'); e.className='d';
+    const cumT=Math.round(total*d/dim);
+    const haveDaily=reportsTotal>0;
+    if(d<now.getDate() || (d===now.getDate()&&haveDaily)){
+      const a=haveDaily?cumActual[d]:actual;
+      e.className+= a>=cumT?' ok':' soon';
+    }
+    if(d===now.getDate()) e.className+=' today';
+    let flag='';
+    if(d===optD) flag+='<div style="font-size:8px; font-weight:800; color:#9E77D6; line-height:1.2">追加〆</div>';
+    if(d===bookD) flag+='<div style="font-size:8px; font-weight:800; color:#c66f96; line-height:1.2">予約〆</div>';
+    if(d===safeD) flag+='<div style="font-size:8px; font-weight:800; color:#5f97be; line-height:1.2">実施〆</div>';
+    if(d===mtgD) flag+='<div style="font-size:8px; font-weight:800; color:#9a8993; line-height:1.2">限界</div>';
+    (evByDay[d]||[]).forEach(ev=>{
+      flag+=`<div class="ev" style="background:${ev.color}">${ev.short}強会</div><div class="evn">${ev.need===null?'目標外・その他':'面談'+ev.need+'件とる'}</div>`;
+    });
+    e.innerHTML=`<div class="n">${d}</div><div class="t">${cumT}</div>${flag}`;
+    g.appendChild(e);
+    if(dow===6 || d===dim) weekBar(d);  // 土曜（または月末）の後に週目標バー
+  }
+}
+
+function renderEvents(now,curYm){
+  const t=targets[curYm]||{};
+  const {mtgD}=deadlines(now);
+  const m=parseInt(curYm.slice(5));
+  const wrap=document.getElementById('evList'); wrap.innerHTML='';
+  const add=(title,sub,need,note)=>{
+    const el=document.createElement('div'); el.className='card';
+    el.style.cssText='padding:12px 14px; margin-bottom:8px;';
+    el.innerHTML=`<div style="display:flex; align-items:baseline; gap:8px;">
+      <b style="font-size:12.5px; color:var(--plum2)">${title}</b>
+      <span style="font-size:10px; color:var(--sub); font-weight:700">${sub}</span>
+      <span style="margin-left:auto; font-size:13px; font-weight:800; color:var(--pinkd); white-space:nowrap">面談 ${need}</span></div>
+      <div style="font-size:10.5px; color:var(--sub); font-weight:600; margin-top:3px">${note}</div>`;
+    wrap.appendChild(el);
+  };
+  // 勉強会があるチャネル: 月目標をイベント数で按分（eventNeedsと共用）
+  const {safeD,bookD}=deadlines(now);
+  eventNeeds(now,curYm).forEach(ev=>{
+    const spill= ev.bookWin>bookD;
+    const late= ev.day>=bookD ? `<b style="color:var(--pinkd)">この会は月内着金にほぼ乗りません。翌月の仕込みとして分けて数える</b>。` : '';
+    const note= late || `予約は開催後${LT.evToBook}日ほど入り続けます（実測）。<b>月内着金に効くのは ${m}/${ev.bookBy} までの予約</b>${spill?`。${m}/${ev.bookBy+1}以降に入る予約は翌月着金勢`:''}。実施は ${m}/${safeD} までに（成約目標${ev.goal}件÷成約率${Math.round(ev.rate*100)}%${ev.count>1?'を'+ev.count+'回で按分':''}）`;
+    if(ev.need===null){
+      add(`${m}/${ev.day} ${ev.ch}勉強会`, ev.time?ev.time+'〜':'時刻未定', '目標外', `77件の目標チャネルに${ev.ch}はありません。面談・成約は「その他導線」として入金ベースの成約に計上されます。開催後${LT.evToBook}日の予約窓＋実施6日なので、この会の成約は主に翌月着地です`);
+      return;
+    }
+    add(`${m}/${ev.day} ${ev.ch}勉強会`, ev.time?ev.time+'〜':'時刻未定', `${ev.need}件`, note);
+  });
+  // 常時導線
+  const alGoal=ALWAYS_ON.reduce((a,ch)=>a+(t[ch]||0),0);
+  if(alGoal) add('広告・YouTube・インタレストマッチ','常時',`${Math.ceil(alGoal/LT.closeRate)}件`,`成約目標${alGoal}件÷55%。月内ペースで平準化・面談は${m}/${mtgD}まで`);
+  // SNS紹介ルート（勉強会ではない）
+  SNS_ROUTE.forEach(s=>{
+    const goal=t[s.ch]||0; if(!goal) return;
+    const rate=CLOSE_RATE[s.ch]||LT.closeRate;
+    add(`${s.ch}`,'SNS紹介ルート',`${Math.ceil(goal/rate)}件`,s.note);
+  });
+}
+
+function renderChannels(curYm,deals){
+  const t=targets[curYm]||{};
+  const actual={};
+  deals.forEach(dl=>{
+    if(!['即決','入金完了'].includes(dl.status||'')) return;
+    const key=CH_ALIAS[(dl.alliance||'').toLowerCase()]||CH_ALIAS[dl.alliance]||dl.alliance||'その他';
+    actual[key]=(actual[key]||0)+1;
+  });
+  const g=document.getElementById('chGrid'); g.innerHTML='';
+  const order=Object.entries(t).filter(([k])=>!k.startsWith('AD_')).sort((a,b)=>b[1]-a[1]);
+  order.forEach(([ch,tv])=>{
+    const av=actual[ch];
+    const div=document.createElement('div'); div.className='card ch';
+    const hasAuto=AUTO_CH.has(ch);
+    div.innerHTML=`<div class="nm">${ch}</div>
+      <div class="num">${hasAuto?(av||0):'–'}<small> / ${tv}件</small></div>
+      <div class="mini"><i style="width:${hasAuto?Math.min(100,(av||0)/tv*100):0}%"></i></div>
+      <div class="nt">${hasAuto?'面談報告から自動':'自動集計はこれから'}</div>`;
+    g.appendChild(div);
+  });
+  document.getElementById('chNote').textContent='実績はダッシュボードの面談報告（即決・入金完了）を数えています。抜けがあれば面談報告の入力をお願いします';
+}
+
+// KR3目標にないチャネル（LiLI=はるか×もりくみ・シンママ・自社など）をその他導線として供給表示
+function renderOthers(curYm,appts,deals){
+  const known=new Set(Object.keys(targets[curYm]||{}).filter(k=>!k.startsWith('AD_')).map(k=>k.toLowerCase()));
+  const norm=s=>{const a=CH_ALIAS[(s||'').toLowerCase()]||CH_ALIAS[s]||s||'不明'; return a;};
+  const isOther=al=>!known.has(String(norm(al)).toLowerCase());
+  const oa={};
+  appts.forEach(a=>{ const al=norm(a.alliance); if(isOther(al)) oa[al]=(oa[al]||0)+1; });
+  const oc={};
+  deals.forEach(dl=>{ if(!['即決','入金完了','分割支払い中'].includes(dl.status||'')) return;
+    const al=norm(dl.alliance); if(isOther(al)) oc[al]=(oc[al]||0)+1; });
+  const el=document.getElementById('otherBox');
+  const parts=[...new Set([...Object.keys(oa),...Object.keys(oc)])].map(al=>{
+    const label= al==='LiLI'?'はるか×もりくみ(LiLI)':al;
+    return `${label} 面談${oa[al]||0}${oc[al]?'・成約'+oc[al]:''}`;
+  });
+  el.innerHTML= parts.length
+    ? `<div style="font-size:12px; color:var(--plum2); font-weight:700">${parts.join('　／　')}</div>
+       <div style="font-size:10px; color:var(--sub); font-weight:600; margin-top:3px">プロモは行わないが面談供給・成約としてカウント中（逆算ラインの「設定済み」に含む）</div>`
+    : `<div style="font-size:11px; color:var(--sub); font-weight:600">今月のその他導線の面談はまだありません</div>`;
+}
+
+// 今月の面談予定 明細
+function renderApptList(appts){
+  const wrap=document.getElementById('apptList');
+  if(!appts.length){ wrap.innerHTML='<div class="skel">今月の設定済み面談はまだありません（2時間ごとに自動同期）</div>'; return; }
+  const rows=[...appts].sort((a,b)=>String(a.start_at).localeCompare(String(b.start_at)));
+  wrap.innerHTML=rows.map(a=>{
+    const d=new Date(a.start_at);
+    const w='日月火水木金土'[d.getDay()];
+    const t=`${d.getMonth()+1}/${d.getDate()}(${w}) ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    const done=d<new Date();
+    return `<div style="display:flex; gap:8px; align-items:center; padding:7px 4px; border-bottom:1px dashed var(--line); font-size:11.5px; ${done?'opacity:.55':''}">
+      <span style="font-weight:800; color:var(--plum2); white-space:nowrap">${t}</span>
+      <span style="flex:1; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${(a.customer||'—')}</span>
+      <span style="font-size:9.5px; font-weight:800; color:#fff; background:var(--grad-lav); border-radius:999px; padding:1px 8px; white-space:nowrap">${a.alliance||'—'}</span>
+      <span style="font-size:10px; color:var(--sub); font-weight:700; white-space:nowrap">${CLOSER_NAMES[a.closer_id]||a.closer_id||''}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderRoas(curYm,deals){
+  const t=targets[curYm]||{};
+  const adCost=t['AD_COST']||0;
+  const adPrice=((targets['2026-ALL']||{})['AD_PRICE'])||0;
+  const adDeals=deals.filter(dl=>['即決','入金完了','分割支払い中'].includes(dl.status||'') && String(dl.alliance||'').includes('広告')).length;
+  const box=document.getElementById('roasBox');
+  const asp=window.__adSpend||null;
+  let rev, cost, dealsN, note;
+  if(asp && (asp.p_after||0)>0){
+    // 自動: 広告費＝Meta広告APIの当月実消化、成約＝セールス管理シートで経由が広告の当月入金（契約額合計）。10分ごと更新
+    cost=asp.p_after||0; dealsN=asp.closed||0; rev=asp.target_deals||0;
+    note='広告費はMeta広告APIの当月実消化（1日〜今日）、成約はセールス管理シートの経由＝広告の当月入金と契約額。10分ごと自動更新';
+  } else {
+    // 広告費が未設定の月はカードごと出さない（設定は任意。入れば自動で復活）
+    if(!adCost||!adPrice){ box.style.display='none'; return; }
+    cost=adCost; dealsN=adDeals; rev=adDeals*adPrice;
+    note='受注ベース・面談報告（クローザーボード）の広告成約から自動集計。広告費は月初に実額へ更新';
+  }
+  box.style.display='';
+  const roas=cost?Math.round(rev/cost*100):0;
+  const col= roas>=500?'var(--pinkd)': roas>=200?'#5f97be':'var(--sub)';
+  box.innerHTML=`
+    <div style="display:flex; align-items:baseline; gap:10px">
+      <b style="font-size:30px; color:${col}">${dealsN? roas.toLocaleString()+'%':'—'}</b>
+      <span style="font-size:11px; color:var(--sub); font-weight:700">目標 500%</span>
+    </div>
+    <div style="font-size:11.5px; color:var(--plum2); font-weight:700; margin-top:4px">
+      広告経由の成約 ${dealsN}件（契約額 ${Math.round(rev/10000).toLocaleString()}万円）／ 広告費 ${Math.round(cost/10000).toLocaleString()}万円
+    </div>
+    <div style="font-size:10px; color:var(--sub); font-weight:600; margin-top:3px">${note}</div>`;
+}
+
+function renderQuarter(q3,monthActual,curYm){
+  const com=qTargets['COM']||267, cha=qTargets['CHA']||350;
+  const sum=q3.reduce((a,m)=>a+(monthActual[m]||0),0);
+  document.getElementById('qNow').textContent=sum+'件';
+  document.getElementById('qLbl').textContent=`/ ${com}件（COM）・挑戦目標 ${cha}件（CHA）`;
+  document.getElementById('qFill').style.width=Math.min(100,sum/cha*100)+'%';
+  document.getElementById('qMarker').style.left=(com/cha*100)+'%';
+  const wrap=document.getElementById('qMonths'); wrap.innerHTML='';
+  q3.forEach(m=>{
+    const mt=monthTotal(m), a=monthActual[m]||0;
+    const el=document.createElement('div'); el.className='m';
+    const mr=mt?Math.round(a/mt*100):0;
+    el.innerHTML=`<b>${a} / ${mt}</b><span>${parseInt(m.slice(5))}月 ${mr}%${m===curYm?'・今月':''}</span>`;
+    wrap.appendChild(el);
+  });
+}
+
+function renderOutcome(rows){
+  // '_oc_all' / '_oc_<slug>' 合成行: meetings=実施 closed=成約 p_verbal=口頭合意・ローン p_after=判断待ち p_long=失注 instant=結果未記入 close_rate=決着ベース成約率
+  const all=rows.find(r=>r.closer_id==='_oc_all');
+  const head=document.getElementById('ocHead'), tbl=document.getElementById('ocTable'), note=document.getElementById('ocNote');
+  if(!all){ head.textContent='今月の面談データ待ち（シート同期後に表示）'; tbl.innerHTML=''; note.textContent=''; return; }
+  const held=all.meetings||0, won=all.closed||0, pipe=all.p_verbal||0, wait=all.p_after||0, lost=all.p_long||0, blank=all.instant||0;
+  const dec=won+lost, inc=dec+pipe+wait;
+  const decRate=dec?Math.round(won/dec*100):null, incRate=inc?Math.round(won/inc*100):null;
+  const c7=rows.find(r=>r.closer_id==='_oc_7d');
+  const c7held=c7?(c7.meetings||0):0, c7won=c7?(c7.closed||0):0, c7lost=c7?(c7.p_long||0):0, c7dec=c7won+c7lost;
+  const c7rate=c7dec?Math.round(c7won/c7dec*100):null;
+  const pct=v=>v===null?'—':v+'%';
+  head.innerHTML=`
+    <div style="display:flex; gap:8px; margin-bottom:8px">
+      <div style="flex:1; background:var(--bg2); border:1px solid var(--line); border-radius:14px; padding:9px 8px; text-align:center">
+        <div style="font-size:10px; color:var(--sub)">決着ベース</div>
+        <div style="font-size:24px; color:var(--pinkd); line-height:1.2">${pct(decRate)}</div>
+        <div style="font-size:9px; color:var(--sub); font-weight:600">成約${won}÷(成約${won}＋失注${lost})</div>
+      </div>
+      <div style="flex:1; background:var(--bg2); border:1px solid var(--line); border-radius:14px; padding:9px 8px; text-align:center">
+        <div style="font-size:10px; color:var(--sub)">判断待ち込み</div>
+        <div style="font-size:24px; color:var(--plum2); line-height:1.2">${pct(incRate)}</div>
+        <div style="font-size:9px; color:var(--sub); font-weight:600">＋口頭合意(ローン含む)${pipe}＋判断待ち${wait}も分母</div>
+      </div>
+    </div>
+    実施 <b>${held}</b>件 → 成約 <b style="color:var(--pinkd)">${won}</b>・口頭合意 <b>${pipe-(all.verbal_closed||0)}</b>・ローン申請中 <b>${all.verbal_closed||0}</b>・判断待ち(長期戦含む) <b>${wait}</b>・失注 <b>${lost}</b>・結果未記入 <b style="color:${blank>0?'var(--pinkd)':'inherit'}">${blank}</b><br>
+    <span style="font-size:11px">役員報告用（面談後7日以上の${c7held}件・決着ベース）: <b style="color:var(--pinkd)">${c7rate===null?'まだ7日経過分なし':c7rate+'%'}</b><span style="color:var(--sub)">　入金の90%は面談から7日以内。一番ブレない数字</span></span><br>
+    <span style="font-size:11px">記録カバー率 <b style="color:${held&&blank===0?'var(--pinkd)':'var(--plum2)'}">${held?Math.round((held-blank)/held*100):100}%</b><span style="color:var(--sub)">　未記入は両方の率の分母に入れていません（結果ではないため）。100%で率が確定</span></span>`;
+  const per=rows.filter(r=>String(r.closer_id).startsWith('_oc_') && r.closer_id!=='_oc_all' && r.closer_id!=='_oc_7d')
+    .map(r=>({slug:r.closer_id.replace('_oc_',''), ...r})).sort((a,b)=>(b.meetings||0)-(a.meetings||0));
+  const th='<tr style="color:var(--sub);font-size:10px"><th style="text-align:left;padding:4px 2px">担当</th><th>実施</th><th>成約</th><th>口頭/ローン</th><th>判断待ち</th><th>失注</th><th>未記入</th><th>決着率</th><th>判断待ち込み</th></tr>';
+  const td=(v,hl)=>`<td style="text-align:center;padding:4px 2px;${hl?'color:var(--pinkd)':''}">${v}</td>`;
+  tbl.innerHTML=th+per.map(r=>{
+    const d=(r.closed||0)+(r.p_long||0); const rate=d?Math.round((r.closed||0)/d*100)+'%':'—';
+    const di=d+(r.p_verbal||0)+(r.p_after||0); const rateI=di?Math.round((r.closed||0)/di*100)+'%':'—';
+    const nm=CLOSER_NAMES[r.slug]||r.slug;
+    return `<tr style="border-top:1px solid #f3e3ec"><td style="text-align:left;padding:4px 2px">${nm}</td>${td(r.meetings||0)}${td(r.closed||0,true)}${td(((r.p_verbal||0)-(r.verbal_closed||0))+'/'+(r.verbal_closed||0))}${td(r.p_after||0)}${td(r.p_long||0)}${td(r.instant||0,(r.instant||0)>0)}${td(rate)}${td(rateI)}</tr>`;
+  }).join('');
+  note.textContent= blank>0
+    ? `結果未記入が${blank}件あります。面談当日にシートの「ステータス」を更新すると、ここが自動で埋まります（10分ごと同期）`
+    : '結果未記入はありません。全員の面談結果が記録されています';
+}
+
+async function renderClosers(rows){
+  const wrap=document.getElementById('closerChips');
+  if(!rows.length){ wrap.innerHTML='<span class="skel">今月の同期データ待ちです（毎時自動更新）</span>'; return; }
+  let names={};
+  try{ const {data}=await sb.from('sc_closers').select('id,name'); (data||[]).forEach(c=>names[c.id]=c.name); }catch(e){}
+  wrap.innerHTML='';
+  rows.sort((a,b)=>(b.closed||0)-(a.closed||0)).forEach(r=>{
+    if(!(r.closed>0)) return;
+    const el=document.createElement('i');
+    el.innerHTML=`${(names[r.closer_id]||r.closer_id)} <b>${r.closed}</b>`;
+    wrap.appendChild(el);
+  });
+  if(!wrap.children.length) wrap.innerHTML='<span class="skel">今月の成約はこれからです。最初の1件を待っています</span>';
+}
+
+async function sendBug(){
+  const t=document.getElementById('bugT').value.trim();
+  if(!t) return;
+  try{
+    await fetch(SB_URL+'/rest/v1/ailab_notes',{method:'POST',
+      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify({member_id:'bug_merone-goal-board', member_name:'目標ボード｜'+(currentEmail||'guest'),
+        mood:'バグ報告', worry:t, want:location.href+' | '+navigator.userAgent})});
+    document.getElementById('bugT').value='';
+    document.getElementById('bugM').classList.remove('on');
+    alert('送信しました。ありがとうございます');
+  }catch(e){ alert('送信に失敗しました: '+e.message); }
+}
+</script>
+</body>
+</html>

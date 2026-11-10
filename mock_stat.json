@@ -1,0 +1,279 @@
+{
+ "ym": "2026-11",
+ "asOf": "11/10 19:02",
+ "source": "mock",
+ "paidMainCount": 10,
+ "paidMainByVia": {
+  "広告": 3,
+  "BUCKET": 4,
+  "SHE": 2,
+  "famm": 1
+ },
+ "paidShiireCount": 2,
+ "pipeline": [
+  {
+   "cat": "口頭合意",
+   "via": "広告",
+   "days": 2,
+   "status": "口頭合意（決済待ち）"
+  },
+  {
+   "cat": "口頭合意",
+   "via": "BUCKET LIST",
+   "days": 4,
+   "status": "口頭合意（決済待ち）"
+  },
+  {
+   "cat": "口頭合意",
+   "via": "SHE",
+   "days": 6,
+   "status": "口頭合意（決済待ち）"
+  },
+  {
+   "cat": "口頭合意",
+   "via": "famm",
+   "days": 9,
+   "status": "ローン審査中"
+  },
+  {
+   "cat": "迷い中",
+   "via": "広告",
+   "days": 1,
+   "status": "判断前"
+  },
+  {
+   "cat": "迷い中",
+   "via": "広告",
+   "days": 3,
+   "status": "判断前"
+  },
+  {
+   "cat": "迷い中",
+   "via": "BUCKET LIST",
+   "days": 2,
+   "status": "判断前"
+  },
+  {
+   "cat": "迷い中",
+   "via": "BUCKET LIST",
+   "days": 5,
+   "status": "判断前"
+  },
+  {
+   "cat": "迷い中",
+   "via": "SHE",
+   "days": 4,
+   "status": "判断前"
+  },
+  {
+   "cat": "迷い中",
+   "via": "famm",
+   "days": 6,
+   "status": "判断前"
+  },
+  {
+   "cat": "迷い中",
+   "via": "ABCash",
+   "days": 7,
+   "status": "判断前"
+  },
+  {
+   "cat": "迷い中",
+   "via": "LiLI",
+   "days": 3,
+   "status": "判断前"
+  },
+  {
+   "cat": "迷い中",
+   "via": "広告",
+   "days": 9,
+   "status": "判断前"
+  },
+  {
+   "cat": "迷い中",
+   "via": "famm",
+   "days": 12,
+   "status": "判断前"
+  },
+  {
+   "cat": "迷い中",
+   "via": "SHE",
+   "days": 15,
+   "status": "判断前"
+  },
+  {
+   "cat": "迷い中",
+   "via": "BUCKET LIST",
+   "days": 20,
+   "status": "判断前"
+  },
+  {
+   "cat": "迷い中",
+   "via": "広告",
+   "days": 25,
+   "status": "判断前"
+  },
+  {
+   "cat": "迷い中",
+   "via": "famm",
+   "days": 31,
+   "status": "判断前"
+  },
+  {
+   "cat": "長期戦",
+   "via": "SHE",
+   "days": 44,
+   "status": "長期戦"
+  }
+ ],
+ "upcoming": [
+  {
+   "via": "広告",
+   "plan": "11/11",
+   "status": "面談前"
+  },
+  {
+   "via": "BUCKET LIST",
+   "plan": "11/11",
+   "status": "面談前"
+  },
+  {
+   "via": "SHE",
+   "plan": "11/12",
+   "status": "面談前"
+  },
+  {
+   "via": "広告",
+   "plan": "11/12",
+   "status": "面談前"
+  },
+  {
+   "via": "famm",
+   "plan": "11/13",
+   "status": "面談前"
+  },
+  {
+   "via": "BUCKET LIST",
+   "plan": "11/13",
+   "status": "リスケ"
+  },
+  {
+   "via": "広告",
+   "plan": "11/14",
+   "status": "面談前"
+  },
+  {
+   "via": "ABCash",
+   "plan": "11/15",
+   "status": "面談前"
+  },
+  {
+   "via": "BUCKET LIST",
+   "plan": "11/16",
+   "status": "面談前"
+  },
+  {
+   "via": "広告",
+   "plan": "11/17",
+   "status": "面談前"
+  },
+  {
+   "via": "SHE",
+   "plan": "11/18",
+   "status": "面談前"
+  },
+  {
+   "via": "famm",
+   "plan": "11/19",
+   "status": "面談前"
+  },
+  {
+   "via": "BUCKET LIST",
+   "plan": "11/19",
+   "status": "面談前"
+  },
+  {
+   "via": "広告",
+   "plan": "11/20",
+   "status": "面談前"
+  },
+  {
+   "via": "LiLI",
+   "plan": "11/21",
+   "status": "面談前"
+  },
+  {
+   "via": "BUCKET LIST",
+   "plan": "11/22",
+   "status": "面談前"
+  },
+  {
+   "via": "SHE",
+   "plan": "11/23",
+   "status": "リスケ"
+  },
+  {
+   "via": "famm",
+   "plan": "11/24",
+   "status": "面談前"
+  },
+  {
+   "via": "広告",
+   "plan": "11/24",
+   "status": "面談前"
+  },
+  {
+   "via": "BUCKET LIST",
+   "plan": "11/25",
+   "status": "面談前"
+  },
+  {
+   "via": "ABCash",
+   "plan": "11/26",
+   "status": "面談前"
+  },
+  {
+   "via": "SHE",
+   "plan": "11/26",
+   "status": "面談前"
+  },
+  {
+   "via": "famm",
+   "plan": "11/27",
+   "status": "面談前"
+  },
+  {
+   "via": "広告",
+   "plan": "11/27",
+   "status": "面談前"
+  },
+  {
+   "via": "BUCKET LIST",
+   "plan": "11/28",
+   "status": "面談前"
+  },
+  {
+   "via": "広告",
+   "plan": "11/29",
+   "status": "面談前"
+  },
+  {
+   "via": "",
+   "plan": "11/30",
+   "status": "面談前"
+  }
+ ],
+ "upcomingByVia": {
+  "広告": 8,
+  "BUCKET LIST": 7,
+  "SHE": 4,
+  "famm": 4,
+  "ABCash": 2,
+  "LiLI": 1,
+  "（空欄）": 1
+ },
+ "mtgDone": 19,
+ "resched": 171,
+ "lostInMonth": 6,
+ "reschedRecent": 3
+}
