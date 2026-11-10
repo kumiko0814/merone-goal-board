@@ -8,7 +8,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  var VERSION = '20261110a'; // index.html の BUILD と一致させる
+  var VERSION = '20261110b'; // index.html の BUILD と一致させる
   var WD = ['日', '月', '火', '水', '木', '金', '土'];
   var RESCHED_SHOW = 0.10, RESCHED_PAID = 0.45; // 日付なしリスケ（§5 層1）
   var STRONG_RATE = 0.6, RATE_CEIL = 0.75;      // 次の一手の上積み試算・過去最高の成約率
@@ -17,7 +17,14 @@
     return {
       v: 1,
       ym: ym || '',
-      cash: { balance: null, balanceDate: '', spendRemain: null, keep: 3000000, otherIncome: 0, unitCash: 500000, paidAtBalance: null },
+      // 支払い合計と売上以外の入金は経費シートから自動（override が null の時）。シート外の支払い（税金など）は手入力
+      cash: {
+        balanceStart: null, balanceDate: '', spendOverride: null,
+        extraSpend: ym === '2026-11' ? 9100000 : 0, extraSpendNote: ym === '2026-11' ? '税金' : '',
+        otherIncomeOverride: null, addAdBudget: true, keep: 3000000, unitCash: 500000
+      },
+      cashByMonth: {},
+      expense: { tab: '' },
       seminars: [],
       ads: { monthlyBudget: 3770000, cplManual: null, optPerDay: 20, optToMtg: 0.043, mtgToPaid: 0.45, maxCostPerDeal: 250000, cplGuard: 5500 },
       rates: {
@@ -61,13 +68,28 @@
     delete s._health;
     if (!Array.isArray(s.seminars)) s.seminars = [];
     if (!isObj(s.snapshots)) s.snapshots = {};
+    if (!isObj(s.cashByMonth)) s.cashByMonth = {};
+    if (!isObj(s.expense)) s.expense = { tab: '' };
+    ['balance', 'spendRemain', 'otherIncome', 'paidAtBalance'].forEach(function (k) { delete s.cash[k]; }); // 旧モデルの項目
     if (ym && saved.ym && saved.ym !== ym) {
-      s.cash.balance = null; s.cash.balanceDate = ''; s.cash.spendRemain = null; s.cash.otherIncome = 0; s.cash.paidAtBalance = null;
+      s.cashByMonth[saved.ym] = clone(s.cash); // 先月の入力は月別に残す
+      var nc = d.cash;
+      nc.keep = s.cash.keep; nc.unitCash = s.cash.unitCash; nc.addAdBudget = s.cash.addAdBudget;
+      s.cash = nc;
       s.seminars = []; s.manual = d.manual; s.promiseManual = null; s.ads.cplManual = null;
     }
     if (ym) s.ym = ym;
     return s;
   }
+
+  /** 保存用: 今月の cash を cashByMonth[ym] にも写す */
+  function mirrorCash(settings) {
+    var s = clone(settings);
+    if (!isObj(s.cashByMonth)) s.cashByMonth = {};
+    if (s.ym) s.cashByMonth[s.ym] = clone(s.cash);
+    return s;
+  }
+  function manS(yen) { return fmtMan(yen).replace('万円', '万'); }
 
   function num(x) { return typeof x === 'number' && isFinite(x) ? x : null; }
   function nz(x) { var n = num(x); return n == null ? 0 : n; }
@@ -273,20 +295,31 @@
     why.mid = '見込み = 入金済み' + paid + ' ＋ 見えている分' + f1(l1) + ' ＋ これからの新規' + f1(l2) + ' = ' + f1(midRaw);
     why.range = '下' + low + ' = 口頭合意0・判断待ち半分・面談予定×0.8・新規×' + R.lowFactorNew + '／上' + high + ' = 口頭合意ぜんぶ・判断待ち×1.5・新規×' + R.highFactorNew;
 
-    // ---- 必要 ----
-    var bal = num(C.balance), spend = num(C.spendRemain), keep = nz(C.keep), oth = nz(C.otherIncome), unit = num(C.unitCash);
+    // ---- 必要（月の合計。入金済みは足さない） ----
+    var X = isObj(opts.expense) ? opts.expense : null;
+    var expenseOk = !!(X && X.ok && num(X.spendTotal) != null);
+    var expenseState = !X ? 'none' : (expenseOk ? 'ok' : 'error');
+    var spendOv = num(C.spendOverride), othOv = num(C.otherIncomeOverride);
+    var spend = spendOv != null ? spendOv : (expenseOk ? X.spendTotal : null);
+    var spendSource = spendOv != null ? 'manual' : (expenseOk ? 'sheet' : null);
+    var oth = othOv != null ? othOv : (expenseOk && num(X.otherIncome) != null ? X.otherIncome : 0);
+    var othSource = othOv != null ? 'manual' : (expenseOk && num(X.otherIncome) != null ? 'sheet' : 'none');
+    var extra = nz(C.extraSpend);
+    var adSpend = C.addAdBudget !== false ? nz(A.monthlyBudget) : 0;
+    var bal = num(C.balanceStart), keep = nz(C.keep), unit = num(C.unitCash);
     var unitMissing = bal != null && spend != null && !(unit != null && unit > 0);
     var inputsReady = bal != null && spend != null && unit != null && unit > 0;
     var need = null, needAdd = null, needCash = null, breakEven = null;
-    var paidBase = num(C.paidAtBalance) != null ? C.paidAtBalance : paid;
     if (inputsReady) {
-      needCash = spend - oth + keep - bal;
-      needAdd = Math.max(0, Math.ceil(needCash / unit - 1e-9));
-      need = paidBase + needAdd;
-      breakEven = paidBase + Math.max(0, Math.ceil((spend - oth - bal) / unit - 1e-9));
-      why.need = '必要 = ' + (num(C.paidAtBalance) != null ? '残高を入れた時の入金済み' : '入金済み') + paidBase + ' ＋ 追加' + needAdd + '（(残りの支払い' + fmtMan(spend) + ' − 売上以外' + fmtMan(oth) + ' ＋ 残す' + fmtMan(keep) + ' − 残高' + fmtMan(bal) + ') ÷ 1件' + fmtMan(unit) + ' を切り上げ）。残す額0なら' + breakEven + '件';
+      needCash = spend + extra + adSpend - oth + keep - bal;
+      need = Math.max(0, Math.ceil(needCash / unit - 1e-9));
+      needAdd = need;
+      breakEven = Math.max(0, Math.ceil((needCash - keep) / unit - 1e-9));
+      why.need = '必要 = (支払' + manS(spend) + ' ＋ シート外' + manS(extra) + (adSpend ? ' ＋ 広告費（カード・シート外）' + manS(adSpend) : '') + ' − 他収入' + manS(oth) + ' ＋ 残す' + manS(keep) + ' − 月初残高' + manS(bal) + ') = ' + manS(needCash) + ' ÷ 1件' + manS(unit) + ' → ' + need + '件（切り上げ）。残す額0なら' + breakEven + '件';
+    } else if (spend == null && expenseState === 'error') {
+      why.need = '経費シートが読めません。支払い合計を自分で入れると、必要数が出ます';
     } else {
-      why.need = '残高・残りの支払い・残す額を入れると、口座に残すために要る件数が出ます';
+      why.need = '月初の口座残高を入れると、今月の支払い（経費シート）から必要数が出ます';
     }
 
     // ---- 約束 ----
@@ -344,8 +377,11 @@
 
     // ---- 次の一手 ----
     var nextMove, nextKind;
-    if (unitMissing) { nextMove = '1件あたり着金額を入れてください'; nextKind = 'input'; }
-    else if (!inputsReady) { nextMove = '残高・残りの支払い・残す額の3つを入れると必要数が出ます'; nextKind = 'input'; }
+    if (spend == null && expenseState === 'error') { nextMove = '経費シートが読めません。支払い合計を自分で入れてください'; nextKind = 'input'; }
+    else if (bal == null) { nextMove = '月初の口座残高を入れると必要数が出ます'; nextKind = 'input'; }
+    else if (spend == null) { nextMove = '経費シートを読み込むと必要数が出ます'; nextKind = 'input'; }
+    else if (unitMissing) { nextMove = '1件あたり着金額を入れてください'; nextKind = 'input'; }
+    else if (!inputsReady) { nextMove = '月初の口座残高を入れると必要数が出ます'; nextKind = 'input'; }
     else if (promise >= need) { nextMove = '約束で足りる月。守るのは面談の実施率（今の予定 ' + ups.length + ' 件）'; nextKind = 'ok'; }
     else {
       var cands = [];
@@ -375,6 +411,8 @@
       bookLine: bookLine, safeLine: safeLine, doLimit: doLimit,
       dates: { book: fmtMD(y, m, bookLine), safe: fmtMD(y, m, safeLine), limit: fmtMD(y, m, doLimit) },
       inputsReady: inputsReady, unitMissing: unitMissing,
+      spend: spend, spendSource: spendSource, spendMissing: spend == null, otherIncome: oth, otherSource: othSource,
+      extraSpend: extra, adSpend: adSpend, balanceStart: bal, expense: X, expenseState: expenseState,
       paid: paid, paidAuto: paidAuto, paidOverridden: paidOv != null, paidByVia: paidByVia, paidByViaRaw: paidByViaRaw, shiire: shiire,
       mtgDone: nz(stat.mtgDone), lostInMonth: cnt(stat.lostInMonth),
       l1: {
@@ -393,7 +431,7 @@
       },
       bucket: bucket, other: other, l2: l2,
       low: low, mid: mid, high: high, midRaw: midRaw,
-      need: need, needAdd: needAdd, needCash: needCash, breakEven: breakEven, paidBase: paidBase,
+      need: need, needAdd: needAdd, needCash: needCash, breakEven: breakEven,
       promise: promise, promiseIsManual: pm != null, gap: gap,
       keep: keep,
       nextMove: nextMove, nextKind: nextKind,
@@ -409,7 +447,7 @@
 
   return {
     VERSION: VERSION,
-    defaults: defaults, normalize: normalize, compute: compute, makeSnapshot: makeSnapshot,
+    defaults: defaults, normalize: normalize, compute: compute, makeSnapshot: makeSnapshot, mirrorCash: mirrorCash,
     viaKey: viaKey, fmtMan: fmtMan, fmtYen: fmtYen, fmtMD: fmtMD, f1: f1, pct: pct,
     RATE_CEIL: RATE_CEIL
   };

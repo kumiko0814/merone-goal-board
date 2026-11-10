@@ -275,5 +275,101 @@
  "mtgDone": 19,
  "resched": 171,
  "lostInMonth": 6,
- "reschedRecent": 3
+ "reschedRecent": 3,
+ "expense": {
+  "ok": true,
+  "ym": "2026-11",
+  "tab": "2026年度",
+  "col": "11月",
+  "spendTotal": 20663752,
+  "salesTotal": 29000000,
+  "recheSales": 22500000,
+  "otherIncome": 6500000,
+  "items": [
+   {
+    "label": "役員報酬",
+    "value": 3251765
+   },
+   {
+    "label": "経営企画",
+    "value": 50000
+   },
+   {
+    "label": "マーケ",
+    "value": 5625000
+   },
+   {
+    "label": "ナーチャ",
+    "value": 591979
+   },
+   {
+    "label": "セールス",
+    "value": 1452589
+   },
+   {
+    "label": "CO",
+    "value": 1608178
+   },
+   {
+    "label": "CX",
+    "value": 1500000
+   },
+   {
+    "label": "開発",
+    "value": 1546149
+   },
+   {
+    "label": "仕入",
+    "value": 300000
+   },
+   {
+    "label": "nomama",
+    "value": 1086578
+   },
+   {
+    "label": "管理部",
+    "value": 884766
+   },
+   {
+    "label": "広報",
+    "value": 489000
+   },
+   {
+    "label": "HR",
+    "value": 1632400
+   },
+   {
+    "label": "顧問",
+    "value": 495000
+   },
+   {
+    "label": "税務",
+    "value": 125400
+   },
+   {
+    "label": "労務",
+    "value": 24948
+   },
+   {
+    "label": "収支",
+    "value": 8336248,
+    "ref": true
+   }
+  ],
+  "salesItems": [
+   {
+    "label": "Re:che",
+    "value": 22500000
+   },
+   {
+    "label": "SKETch",
+    "value": 4500000
+   },
+   {
+    "label": "物販",
+    "value": 2000000
+   }
+  ],
+  "error": ""
+ }
 }

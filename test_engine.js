@@ -22,13 +22,18 @@ function nov(extra) {
   if (extra) extra(s);
   return s;
 }
+var EXP = MOCK.expense; // 経費シートのサンプル（支払 20,663,752・他収入 6,500,000）
+// 旧テストと同じ「必要45」になる入力: 支払いを自分で入れる・シート外/広告費/他収入なし
+function cash45(s, spendOv) { s.cash.balanceStart = 5000000; s.cash.spendOverride = spendOv == null ? 24500000 : spendOv; s.cash.extraSpend = 0; s.cash.addAdBudget = false; s.cash.otherIncomeOverride = 0; }
 function emptyStat() { return { paidMainCount: 0, paidMainByVia: {}, pipeline: [], upcoming: [], resched: 0 }; }
 
 // ① 入力空 → need null・次の一手は入力案内
 (function () {
   var r = E.compute(E.defaults('2026-11'), MOCK, null, D1110);
   check('①-1 入力空なら need は null', r.need === null, r.need);
-  check('①-2 次の一手は入力案内', r.nextMove === '残高・残りの支払い・残す額の3つを入れると必要数が出ます', r.nextMove);
+  check('①-2 次の一手は入力案内（月初の口座残高）', r.nextMove === '月初の口座残高を入れると必要数が出ます', r.nextMove);
+  var rx = E.compute(E.defaults('2026-11'), MOCK, null, D1110, { expense: EXP });
+  check('①-4 経費シートが読めても残高が空なら need null・同じ案内', rx.need === null && rx.spend === 20663752 && rx.spendSource === 'sheet' && rx.nextMove === '月初の口座残高を入れると必要数が出ます', [rx.need, rx.spend, rx.nextMove]);
   var r0 = E.compute(null, null, null, D1110);
   check('①-3 設定・実績が全部 null でも落ちない', r0 && r0.need === null && r0.mid >= 0 && r0.paid === 0, { mid: r0.mid, paid: r0.paid });
 })();
@@ -54,34 +59,51 @@ function emptyStat() { return { paidMainCount: 0, paidMainByVia: {}, pipeline: [
   check('②-13 主要な数字に why がある', keys.every(function (k) { return typeof r.why[k] === 'string' && r.why[k].length > 0; }), keys.filter(function (k) { return !r.why[k]; }));
 })();
 
-// ③ 必要数の検算
+// ③ 必要数の検算（新しいお金の形: 月の合計・入金済みは足さない）
 (function () {
-  var r = E.compute(nov(function (s) { s.cash.balance = 5000000; s.cash.spendRemain = 25000000; s.cash.keep = 3000000; s.cash.unitCash = 500000; }), MOCK, null, D1110);
-  check('③-1 needCash 2,300万 → needAdd 46', r.needCash === 23000000 && r.needAdd === 46, [r.needCash, r.needAdd]);
-  check('③-2 need = paid10 + 46 = 56', r.need === 56, r.need);
-  check('③-3 損益分岐 = 10 + ceil(2,000万/50万) = 50', r.breakEven === 50, r.breakEven);
-  var r45 = E.compute(nov(function (s) { s.cash.balance = 5000000; s.cash.spendRemain = 19500000; }), MOCK, null, D1110);
-  check('③-4 残高500万・残り支払い1,950万・残す300万 → need 45', r45.need === 45 && r45.needAdd === 35, [r45.need, r45.needAdd]);
-  var rOther = E.compute(nov(function (s) { s.cash.balance = 5000000; s.cash.spendRemain = 19500000; s.cash.otherIncome = 1000000; }), MOCK, null, D1110);
-  check('③-5 売上以外の入金100万で need が2減る', rOther.need === 43, rOther.need);
-  var rNeg = E.compute(nov(function (s) { s.cash.balance = 90000000; s.cash.spendRemain = 1000000; }), MOCK, null, D1110);
-  check('③-6 needAdd は0未満にならない', rNeg.needAdd === 0 && rNeg.need === 10, [rNeg.needAdd, rNeg.need]);
-  var rBase = E.compute(nov(function (s) { s.cash.balance = 5000000; s.cash.spendRemain = 19500000; s.cash.paidAtBalance = 0; }), MOCK, null, D1110);
-  check('③-7 残高を入れた時点の入金済み(0)を基準にすると need = 35', rBase.need === 35, rBase.need);
-  var rReach = E.compute(nov(function (s) { s.cash.balance = 5000000; s.cash.spendRemain = 19500000; s.promiseManual = 50; }), MOCK, null, D1110);
-  check('③-8 約束 ≥ 必要 → 「約束で足りる月」', /^約束で足りる月。守るのは面談の実施率（今の予定 27 件）$/.test(rReach.nextMove), rReach.nextMove);
-  check('③-9 約束が足りない時は「いちばん効くのは…（+x件）」', /^いちばん効くのは.+（\+[\d.]+件）$/.test(r45.nextMove), r45.nextMove);
-  check('③-10 お声がけ候補は「n人への個別のお声がけ」・決め切りは使わない', /^いちばん効くのは口頭合意と判断待ち 19人への個別のお声がけ（\+[\d.]+件）$/.test(r45.nextMove) && !/決め切り/.test(r45.nextMove), r45.nextMove);
+  var EXP2 = { ok: true, spendTotal: 22120453, otherIncome: 6500000, items: [] };
+  function c(fn) { return nov(function (s) { s.cash.balanceStart = 5000000; if (fn) fn(s); }); }
+  var r = E.compute(c(), MOCK, null, D1110, { expense: EXP2 });
+  check('③-1 支払2,212万＋シート外910万＋広告377万−他収入650万＋残す300万−月初500万 = 2,649万 → 53件', r.needCash === 26490453 && r.need === 53, [r.needCash, r.need]);
+  check('③-2 損益分岐（残す0） = ceil(2,349万/50万) = 47件', r.breakEven === 47, r.breakEven);
+  var rOff = E.compute(c(function (s) { s.cash.addAdBudget = false; }), MOCK, null, D1110, { expense: EXP2 });
+  check('③-3 広告費をシート外に入れない → ceil(2,272万/50万) = 46件', rOff.needCash === 22720453 && rOff.need === 46 && rOff.adSpend === 0, [rOff.needCash, rOff.need]);
+  var rm = E.compute(c(), MOCK, null, D1110, { expense: EXP });
+  check('③-4 サンプル経費（2,066万）・広告あり → 51件・損益分岐45件', rm.need === 51 && rm.breakEven === 45, [rm.need, rm.breakEven]);
+  var rm2 = E.compute(c(function (s) { s.cash.addAdBudget = false; }), MOCK, null, D1110, { expense: EXP });
+  check('③-5 サンプル経費・広告なし → ceil(2,126万/50万) = 43件・損益分岐37件', rm2.need === 43 && rm2.breakEven === 37, [rm2.need, rm2.breakEven]);
+  var st0 = emptyStat(); st0.paidMainCount = 0;
+  var rp = E.compute(c(), st0, null, D1110, { expense: EXP });
+  check('③-6 必要は月の合計（入金済みを足さない）', rp.need === rm.need, [rp.need, rm.need]);
+  var w = r.why.need;
+  check('③-7 why に実際の数字', /支払2,212万/.test(w) && /シート外910万/.test(w) && /広告費（カード・シート外）377万/.test(w) && /他収入650万/.test(w) && /残す300万/.test(w) && /月初残高500万/.test(w) && /1件50万/.test(w) && /53件/.test(w), w);
+  check('③-8 広告なしの why に広告費が出ない', !/広告費/.test(rOff.why.need), rOff.why.need);
+  var rErr = E.compute(c(), MOCK, null, D1110, { expense: { ok: false, error: '11月の列がありません' } });
+  check('③-9 経費シートが読めない・自分で入れていない → need null・専用の案内', rErr.need === null && rErr.spendMissing && rErr.expenseState === 'error' && rErr.nextMove === '経費シートが読めません。支払い合計を自分で入れてください', rErr.nextMove);
+  var rOv = E.compute(c(function (s) { s.cash.spendOverride = 20000000; }), MOCK, null, D1110, { expense: { ok: false, error: 'x' } });
+  check('③-10 読めなくても自分で入れた支払いで計算（他収入は0）', rOv.need === Math.ceil((20000000 + 9100000 + 3770000 - 0 + 3000000 - 5000000) / 500000) && rOv.spendSource === 'manual' && rOv.otherIncome === 0, rOv.need);
+  var rOv2 = E.compute(c(function (s) { s.cash.spendOverride = 21000000; s.cash.otherIncomeOverride = 1000000; }), MOCK, null, D1110, { expense: EXP });
+  check('③-11 自分で入れた値がシートより優先', rOv2.spend === 21000000 && rOv2.otherIncome === 1000000 && rOv2.otherSource === 'manual', [rOv2.spend, rOv2.otherIncome]);
+  check('③-12 シート外の支払いの既定: 11月は910万（税金）・12月は0', E.defaults('2026-11').cash.extraSpend === 9100000 && E.defaults('2026-11').cash.extraSpendNote === '税金' && E.defaults('2026-12').cash.extraSpend === 0);
+  var rNeg = E.compute(c(function (s) { s.cash.balanceStart = 90000000; }), MOCK, null, D1110, { expense: EXP });
+  check('③-13 need は0未満にならない', rNeg.need === 0 && rNeg.breakEven === 0, [rNeg.need, rNeg.breakEven]);
+  var r45 = E.compute(nov(function (s) { cash45(s); }), MOCK, null, D1110);
+  check('③-14 旧テストと同じ入力で need 45', r45.need === 45, r45.need);
+  var rReach = E.compute(nov(function (s) { cash45(s); s.promiseManual = 50; }), MOCK, null, D1110);
+  check('③-15 約束 ≥ 必要 → 「約束で足りる月」', /^約束で足りる月。守るのは面談の実施率（今の予定 27 件）$/.test(rReach.nextMove), rReach.nextMove);
+  check('③-16 お声がけ候補は「n人への個別のお声がけ」・決め切りは使わない', /^いちばん効くのは口頭合意と判断待ち 19人への個別のお声がけ（\+[\d.]+件）$/.test(r45.nextMove) && !/決め切り/.test(r45.nextMove), r45.nextMove);
   var up = 0.5 * (3 * 0.69 + 1 * 0.5 + 8 * 0.65 + 4 * 0.85 + 3 * 0.95);
-  check('③-11 お声がけの上積み = 残りの人 ×（1−今の率）× 0.5 = ' + up.toFixed(2), r45.nextMove.indexOf('+' + (Math.round(up * 10) / 10) + '件') > 0, r45.nextMove);
-  var r0 = E.compute(nov(function (s) { s.cash.balance = 5000000; s.cash.spendRemain = 19500000; s.cash.unitCash = 0; }), MOCK, null, D1110);
-  check('③-12 1件あたり着金額0 → 専用の案内・need null', r0.need === null && r0.unitMissing && r0.nextMove === '1件あたり着金額を入れてください', r0.nextMove);
-  check('③-13 E.VERSION がある', typeof E.VERSION === 'string' && E.VERSION.length > 0);
+  check('③-17 お声がけの上積み = 残りの人 ×（1−今の率）× 0.5', r45.nextMove.indexOf('+' + (Math.round(up * 10) / 10) + '件') > 0, r45.nextMove);
+  var r0 = E.compute(nov(function (s) { cash45(s); s.cash.unitCash = 0; }), MOCK, null, D1110);
+  check('③-18 1件あたり着金額0 → 専用の案内・need null', r0.need === null && r0.unitMissing && r0.nextMove === '1件あたり着金額を入れてください', r0.nextMove);
+  check('③-19 E.VERSION がある', typeof E.VERSION === 'string' && E.VERSION.length > 0);
+  var mir = E.mirrorCash(c());
+  check('③-20 保存用に cashByMonth[ym] へ写す', JSON.stringify(mir.cashByMonth['2026-11']) === JSON.stringify(mir.cash) && mir.cashByMonth['2026-11'].balanceStart === 5000000);
 })();
 
 // ④ 勉強会の needRate > 0.75 → verdict と needAttend
 (function () {
-  var r = E.compute(nov(function (s) { s.cash.balance = 5000000; s.cash.spendRemain = 19500000; }), MOCK, null, D1110);
+  var r = E.compute(nov(function (s) { cash45(s); }), MOCK, null, D1110);
   var s1 = r.seminars[0];
   check('④-1 needRate > 0.75', s1.needRate > 0.75, s1.needRate);
   check('④-2 verdict = 過去最高75%を超える', s1.verdict === '過去最高75%を超える' && s1.verdictKind === 'pink', s1.verdict);
@@ -93,7 +115,7 @@ function emptyStat() { return { paidMainCount: 0, paidMainByVia: {}, pipeline: [
   var all = r.semTotal + r.ad.deals;
   check('④-4c 勉強会1回目の割合 = thisMonth / (勉強会合計 ＋ 広告)', near(s1.needDeals, r.gap * s1.thisMonth / all, 1e-9));
   check('④-5 needRate = needDeals / (面談 × 入金率)', near(s1.needRate, s1.needDeals / (s1.mtgs * s1.payRate), 1e-9));
-  var small = E.compute(nov(function (s) { s.cash.balance = 5000000; s.cash.spendRemain = 7000000; }), MOCK, null, D1110);
+  var small = E.compute(nov(function (s) { cash45(s, 12000000); }), MOCK, null, D1110);
   check('④-6 足りない分0 → 届く範囲・needAttend なし', small.seminars[0].verdict === '届く範囲' && small.seminars[0].needAttend === null, small.seminars[0]);
   var past = E.compute(nov(function (s) { s.seminars.push({ id: 's0', alliance: 'SHE', date: '2026-11-05', attend: 40 }); }), MOCK, null, D1110);
   var p = past.seminars[3];
@@ -106,7 +128,7 @@ function emptyStat() { return { paidMainCount: 0, paidMainByVia: {}, pipeline: [
 
 // ⑤ 広告 guardCpl の式
 (function () {
-  var r = E.compute(nov(function (s) { s.cash.balance = 5000000; s.cash.spendRemain = 19500000; }), MOCK, null, D1110);
+  var r = E.compute(nov(function (s) { cash45(s); }), MOCK, null, D1110);
   var A = E.defaults('2026-11').ads, ad = r.ad;
   check('⑤-1 adNeed = gap × 広告 / (勉強会合計 ＋ 広告)', near(ad.need, r.gap * ad.deals / (r.semTotal + ad.deals), 1e-9), [ad.need, r.gap, ad.deals, r.semTotal]);
   check('⑤-2 needOpt = adNeed / 成約 / 面談化', near(ad.needOpt, ad.need / A.mtgToPaid / A.optToMtg, 1e-9));
@@ -120,7 +142,7 @@ function emptyStat() { return { paidMainCount: 0, paidMainByVia: {}, pipeline: [
   check('⑤-7 広告の成約 = opt × (残り21日 − 12日) × 面談化 × 成約 × 85%', near(rm.ad.deals, opd * 9 * 0.043 * 0.45 * 0.85, 1e-9), rm.ad.deals);
   var rt = E.compute(nov(), MOCK, meta, D1110, { cplTry: 2500 });
   check('⑤-8 CPLスライダー（試し値）で広告の成約が増える', rt.ad.deals > rm.ad.deals && rt.mid >= rm.mid && rt.ad.cplTry === 2500, [rt.ad.deals, rm.ad.deals]);
-  var noGap = E.compute(nov(function (s) { s.cash.balance = 50000000; s.cash.spendRemain = 1000000; }), MOCK, null, D1110);
+  var noGap = E.compute(nov(function (s) { cash45(s, 1000000); s.cash.balanceStart = 50000000; }), MOCK, null, D1110);
   check('⑤-9 足りない分0 → 「足りる」・adNeed 0・CPLの線は定数のまま', noGap.ad.enough === true && noGap.ad.need === 0 && near(noGap.ad.guardCpl, 4837.5, 1e-6) && near(noGap.ad.guardMonth, 4837.5, 1e-6), noGap.ad);
   var g2 = E.compute(nov(function (s) { s.ads.maxCostPerDeal = 400000; }), MOCK, null, D1110);
   check('⑤-10 線が5,500円を超える時は 今月の死守CPL = ガード5,500円', near(g2.ad.guardCpl, 400000 * 0.45 * 0.043, 1e-6) && g2.ad.guardMonth === 5500, [g2.ad.guardCpl, g2.ad.guardMonth]);
@@ -162,9 +184,14 @@ function emptyStat() { return { paidMainCount: 0, paidMainByVia: {}, pipeline: [
   check('表示-2 1,250.5万円', E.fmtMan(12505000) === '1,250.5万円', E.fmtMan(12505000));
   check('表示-3 5,500円', E.fmtYen(5500) === '5,500円');
   check('表示-4 M/d(曜)', E.fmtMD(2026, 11, 18) === '11/18(水)');
-  var old = nov(function (s) { s.ym = '2026-10'; s.cash.balance = 1; s.cash.spendRemain = 2; s.rates.verbal = 0.4; s.snapshots['2026-10'] = { date: '2026-10-01', need: 40 }; s._health = 123; });
+  var old = nov(function (s) { s.ym = '2026-10'; s.cash.balanceStart = 1; s.cash.balanceDate = '2026-10-01'; s.cash.extraSpend = 777; s.cash.spendOverride = 5; s.cash.otherIncomeOverride = 6; s.cash.keep = 4000000; s.rates.verbal = 0.4; s.snapshots['2026-10'] = { date: '2026-10-01', need: 40 }; s._health = 123; });
   var n = E.normalize(old, '2026-11');
-  check('月替わり-1 残高・支払い・勉強会は空に戻る', n.cash.balance === null && n.cash.spendRemain === null && n.seminars.length === 0, n.cash);
+  var nDec = E.normalize(nov(function (s) { s.cash.balanceStart = 1; s.cash.extraSpend = 9100000; s.cash.spendOverride = 5; }), '2026-12');
+  check('月替わり-0 11月→12月: シート外は0・月初残高は空・自分で入れた値は null', nDec.cash.extraSpend === 0 && nDec.cash.balanceStart === null && nDec.cash.spendOverride === null && nDec.cashByMonth['2026-11'].extraSpend === 9100000, nDec.cash);
+  check('月替わり-1 10月→11月: 月初残高・入力日は空・シート外は11月の既定（税金910万）・自分で入れた値は null・勉強会は空', n.cash.extraSpend === 9100000 && n.cash.balanceStart === null && n.cash.balanceDate === '' && n.cash.spendOverride === null && n.cash.otherIncomeOverride === null && n.seminars.length === 0, n.cash);
+  check('月替わり-1b 先月の入力は cashByMonth に残る・残す額は引き継ぐ', n.cashByMonth['2026-10'] && n.cashByMonth['2026-10'].balanceStart === 1 && n.cashByMonth['2026-10'].extraSpend === 777 && n.cash.keep === 4000000, n.cashByMonth);
+  var legacy = E.normalize({ ym: '2026-11', cash: { balance: 1, spendRemain: 2, otherIncome: 3, paidAtBalance: 4 } }, '2026-11');
+  check('月替わり-1c 旧モデルの項目（今日の残高・paidAtBalance など）は消える', !('balance' in legacy.cash) && !('spendRemain' in legacy.cash) && !('otherIncome' in legacy.cash) && !('paidAtBalance' in legacy.cash) && legacy.cash.extraSpend === 9100000, legacy.cash);
   check('月替わり-2 率とスナップショットは引き継ぐ', n.rates.verbal === 0.4 && n.snapshots['2026-10'].need === 40 && n.ym === '2026-11');
   check('月替わり-3 _health は残らない', !('_health' in n));
   var part = E.normalize({ ym: '2026-11', rates: { byVia: { famm: 0.3 } } }, '2026-11');

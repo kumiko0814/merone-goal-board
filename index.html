@@ -197,6 +197,18 @@ details > summary .st{margin-left:auto; font-size:10.5px; font-weight:800; color
 .fld input:focus,.pinrow input:focus,.inl input:focus{outline:none; border-color:var(--pink); box-shadow:0 0 0 3px rgba(240,162,197,.18);}
 .fld .u{flex:none; font-size:12px; font-weight:800; color:var(--plum);}
 .fld .hint{font-size:10.5px; color:var(--sub); font-weight:700; margin-top:2px;}
+.autov{display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; margin-top:4px;}
+.autov b{font-size:18px; font-weight:800; color:var(--plum2); font-variant-numeric:tabular-nums;}
+.autov small{font-size:10.5px; color:var(--sub); font-weight:700;}
+.items{margin:6px 0 2px; background:var(--bg2); border:1px solid var(--line); border-radius:12px; padding:6px 10px;}
+.items .it{display:flex; justify-content:space-between; gap:8px; font-size:11.5px; color:var(--plum); padding:2px 0; border-bottom:1px dashed var(--line);}
+.items .it:last-child{border-bottom:none;}
+.items .it b{font-variant-numeric:tabular-nums; color:var(--plum2); white-space:nowrap;}
+.items .it.sub{color:var(--sub); font-size:10.5px;}
+.sw{display:flex; align-items:flex-start; gap:10px; padding:10px 0 4px; font-size:12.5px; font-weight:800; color:var(--plum2);}
+.sw input{width:22px; height:22px; margin-top:1px; accent-color:#c66f96; flex:none;}
+.sw small{display:block; font-size:10.5px; color:var(--sub); font-weight:700;}
+.calc small{display:block; font-size:10.5px; color:var(--sub); font-weight:700; margin-top:4px; line-height:1.6;}
 .calc{margin-top:10px; font-size:12px; font-weight:800; color:var(--plum2); background:var(--bg2); border-radius:12px; padding:8px 12px;}
 .bigbtn{display:block; width:100%; border:none; padding:13px; border-radius:16px; font-size:15px; font-weight:800; letter-spacing:.06em; background:var(--grad); color:#fff; box-shadow:0 10px 24px -10px rgba(185,139,234,.7); margin-top:12px;}
 .bigbtn[disabled]{opacity:.6;}
@@ -412,7 +424,7 @@ details > summary .st{margin-left:auto; font-size:10.5px; font-weight:800; color
 
 <div id="dbg" hidden></div>
 
-<script src="engine.js?v=20261110a"></script>
+<script src="engine.js?v=20261110b"></script>
 <script>
 (function(){
 'use strict';
@@ -428,12 +440,12 @@ var SEED={ '2026-11':[
   { id:'s2', alliance:'ABCash', date:'2026-11-21', attend:null, note:'' },
   { id:'s3', alliance:'famm', date:'2026-11-28', attend:null, note:'' } ] };
 var SEED_SNAP={ '2026-11':{ date:'2026-11-01', need:45, low:24, mid:33, high:42, promise:33, note:'月初の原文' } };
-var BUILD='20261110a'; // engine.js?v= と E.VERSION を同じにする
+var BUILD = '20261110b'; // engine.js?v= と E.VERSION を同じにする
 var E=window.CockpitEngine;
 var memPin='';
-var SECS=['cash','seminars','ads','rates','manual','promiseManual','snapshots'];
+var SECS=['cash','seminars','ads','rates','manual','promiseManual','snapshots','expense'];
 var st={ ym:'', today:null, settings:null, stat:null, meta:null, asOf:'', fetchedAt:0, settingsUpdated:'',
-  dirty:false, pending:false, changeN:0, secs:{}, liveStat:false, loading:false, saving:false, loadFail:'',
+  expense:null, dirty:false, pending:false, changeN:0, secs:{}, loading:false, saving:false, loadFail:'',
   lastSaveOkAt:0, lastLoadAt:0, cplTry:null, res:null };
 
 function $(id){ return document.getElementById(id); }
@@ -455,7 +467,7 @@ function lsDel(k){ try{ localStorage.removeItem(k); }catch(e){} }
 function getPin(){ return lsGet(K_PIN) || memPin || ''; }
 function readCache(){ try{ var c=JSON.parse(lsGet(K_CACHE)||'null'); return c && typeof c==='object' ? c : null; }catch(e){ return null; } }
 var cacheTimer=null;
-function writeCacheNow(){ lsSet(K_CACHE, JSON.stringify({ v:1, ym:st.ym, settings:st.settings, settingsUpdated:st.settingsUpdated, secs:st.secs, stat:st.stat, meta:st.meta, asOf:st.asOf, fetchedAt:st.fetchedAt, dirty:st.dirty, pending:st.pending })); }
+function writeCacheNow(){ lsSet(K_CACHE, JSON.stringify({ v:1, ym:st.ym, settings:st.settings, settingsUpdated:st.settingsUpdated, secs:st.secs, stat:st.stat, meta:st.meta, expense:st.expense, asOf:st.asOf, fetchedAt:st.fetchedAt, dirty:st.dirty, pending:st.pending })); }
 function writeCache(){ if(cacheTimer) clearTimeout(cacheTimer); cacheTimer=setTimeout(function(){ cacheTimer=null; writeCacheNow(); }, 400); }
 
 /* ---------- 画面のお知らせ ---------- */
@@ -474,7 +486,7 @@ function setNote(kind){
 function removeBoot(){ var b=$('boot'); if(b && b.parentNode) b.parentNode.removeChild(b); }
 
 /* ---------- 計算と描画 ---------- */
-function compute(){ st.res=E.compute(st.settings, st.stat, st.meta, st.today, { cplTry:st.cplTry }); return st.res; }
+function compute(){ st.res=E.compute(st.settings, st.stat, st.meta, st.today, { cplTry:st.cplTry, expense:st.expense }); return st.res; }
 
 function whyText(k){
   var r=st.res; if(!r) return '';
@@ -503,7 +515,7 @@ function renderNums(){
   var keepS=E.fmtMan(r.keep).replace('万円','万');
   var h='';
   h+='<button type="button" class="nc need" data-why="need"><span class="lb">必要</span><b>'+(r.need==null?'—':r.need+'<small>件</small>')+'</b>'
-    +'<span class="ex">'+(r.need==null?(r.unitMissing?'着金額を入れると出ます':'3つ入れると出ます'):'口座に'+esc(keepS)+'残す数')+'</span></button>';
+    +'<span class="ex">'+(r.need==null?(r.unitMissing?'着金額を入れると出ます':r.spendMissing&&r.expenseState==='error'?'支払いを入れると出ます':r.balanceStart==null?'月初残高を入れると出ます':'経費シートの読み込み待ち'):'口座に'+esc(keepS)+'残す数')+'</span></button>';
   h+='<button type="button" class="nc mid" data-why="mid"><span class="lb">見込み</span><b>'+(has?r.mid+'<small>件</small>':'—')+'</b>'
     +'<span class="rg">'+(has?r.low+'〜'+r.high:'読み込み待ち')+'</span><span class="ex">流入×率</span></button>';
   h+='<button type="button" class="nc pro" data-why="promise"><span class="lb">約束</span><b>'+((has||r.promiseIsManual)?r.promise+'<small>件</small>':'—')+'</b>'
@@ -648,40 +660,85 @@ function renderDates(){
    +'<button type="button" class="dchip" data-why="doLimit"><span>実施限界</span><b>'+r.dates.limit+'</b></button>';
 }
 
-/* 入力（万円で入れて円で持つ） */
-var IN_FIELDS=[
-  { k:'balance', l:'今日の口座残高', ph:'例）500' },
-  { k:'spendRemain', l:'月末までの残りの支払い（全部込み）', ph:'例）1950' },
-  { k:'keep', l:'残したい額', ph:'300', def:3000000, hint:'既定 300万円' },
-  { k:'otherIncome', l:'売上以外の入金', ph:'0', def:0, hint:'既定 0円' },
-  { k:'unitCash', l:'1件あたり着金額', ph:'50', def:500000, hint:'既定 50万円' }
-];
+/* 入力（万円で入れて円で持つ）。支払い合計・売上以外の入金は経費シートから自動、「自分で入れる」で上書き */
+var IN_FIELDS={
+  balanceStart:{ l:'月初の口座残高', ph:'例）500' },
+  extraSpend:{ l:'シート外の支払い（税金など）', ph:'0', def:0 },
+  keep:{ l:'残したい額', ph:'300', def:3000000, hint:'既定 300万円' },
+  unitCash:{ l:'1件あたり着金額', ph:'50', def:500000, hint:'既定 50万円' }
+};
+var AUTO={
+  spend:{ ov:'spendOverride', l:'今月の支払い合計' },
+  other:{ ov:'otherIncomeOverride', l:'売上以外の入金' }
+};
 function manVal(yen){ return isNum(yen) ? String(Math.round(yen/1000)/10) : ''; }
+function numField(k){
+  var f=IN_FIELDS[k], c=st.settings.cash;
+  return '<label class="fld"><span class="fl">'+f.l+(f.hint?' <small>'+f.hint+'</small>':'')+'</span>'
+    +'<span class="iw"><input type="number" inputmode="decimal" step="any" data-cash="'+k+'" placeholder="'+f.ph+'" value="'+manVal(c[k])+'"><span class="u">万円</span></span>'
+    +'<span class="hint" id="hint_'+k+'"></span></label>';
+}
+function autoField(k){
+  var a=AUTO[k], c=st.settings.cash;
+  return '<div class="fld"><span class="fl">'+a.l+' <span class="chip blue" id="'+k+'Src"></span></span>'
+    +'<div class="autov" id="'+k+'Auto"><b id="'+k+'Val"></b><small id="'+k+'Tab"></small><button type="button" class="mini" data-items="'+k+'">タップで内訳</button></div>'
+    +'<div class="items" id="'+k+'Items" hidden></div>'
+    +'<span class="iw" id="'+k+'ManW" hidden><input type="number" inputmode="decimal" step="any" data-ov="'+a.ov+'" placeholder="例）2000" value="'+manVal(c[a.ov])+'"><span class="u">万円</span></span>'
+    +'<span class="hint" id="'+k+'Err"></span>'
+    +'<button type="button" class="mini" data-toggle="'+k+'" style="margin-left:0"></button></div>';
+}
 function buildInputs(){
-  var c=st.settings.cash, h='';
-  IN_FIELDS.forEach(function(f){
-    h+='<label class="fld"><span class="fl">'+f.l+(f.hint?' <small>'+f.hint+'</small>':'')+'</span>'
-      +'<span class="iw"><input type="number" inputmode="decimal" step="any" data-cash="'+f.k+'" placeholder="'+f.ph+'" value="'+manVal(c[f.k])+'"><span class="u">万円</span></span>'
-      +(f.k==='balance'?'<span class="hint" id="balHint"></span>':'')+'</label>';
-  });
-  $('inFields').innerHTML=h;
+  var c=st.settings.cash;
+  $('inFields').innerHTML = numField('balanceStart') + autoField('spend') + numField('extraSpend')
+    + '<label class="sw"><input type="checkbox" data-cashb="addAdBudget"'+(c.addAdBudget!==false?' checked':'')+'><span>広告費はシート外（カード払い）<small id="adBudgetHint"></small></span></label>'
+    + autoField('other') + numField('keep') + numField('unitCash');
+}
+var uiManual={ spend:false, other:false };
+function itemsHtml(k){
+  var x=st.res.expense||{}, h='';
+  if(k==='spend'){
+    (x.items||[]).forEach(function(it){ if(!it || it.ref) return; h+='<div class="it"><span>'+esc(it.label)+'</span><b>'+E.fmtMan(it.value)+'</b></div>'; });
+  } else {
+    (x.salesItems||[]).forEach(function(it){ if(!it || it.ref) return; h+='<div class="it"><span>'+esc(it.label)+'</span><b>'+E.fmtMan(it.value)+'</b></div>'; });
+    if(isNum(x.recheSales)) h+='<div class="it sub"><span>Re:che の売上（'+E.fmtMan(x.recheSales)+'）は成約で数えるので除いています</span></div>';
+  }
+  return h || '<div class="it sub"><span>内訳はまだありません</span></div>';
+}
+function renderAuto(k){
+  var r=st.res, a=AUTO[k], c=st.settings.cash, x=r.expense, ok=r.expenseState==='ok';
+  var ov=c[a.ov], manual = isNum(ov) || uiManual[k] || (k==='spend' && !ok && r.expenseState==='error');
+  var val = k==='spend' ? r.spend : r.otherIncome, src = k==='spend' ? r.spendSource : r.otherSource;
+  var chip=$(k+'Src');
+  chip.textContent = src==='manual' ? '自分で入力' : (ok ? '経費シートから自動' : '');
+  chip.className = 'chip '+(src==='manual'?'lav':'blue'); chip.hidden=!chip.textContent;
+  $(k+'Val').textContent = val!=null ? E.fmtMan(val) : (r.expenseState==='none' ? '読み込み中…' : '—');
+  $(k+'Tab').textContent = ok && src!=='manual' && x.tab ? 'タブ「'+x.tab+'」'+(x.col?'・'+x.col:'') : '';
+  var ib=document.querySelector('[data-items="'+k+'"]'); if(ib) ib.hidden = !ok;
+  var list=$(k+'Items'); if(!list.hidden) list.innerHTML=itemsHtml(k);
+  $(k+'ManW').hidden=!manual;
+  var err='';
+  if(r.expenseState==='error' && !isNum(ov)) err = k==='spend' ? '経費シートが読めません。支払い合計を自分で入れてください' : '経費シートが読めないので 0 で計算しています';
+  if(err && DEBUG && x && x.error) err+=' ['+String(x.error).slice(0,80)+']';
+  $(k+'Err').textContent=err;
+  var tg=document.querySelector('[data-toggle="'+k+'"]');
+  if(tg){ tg.textContent = manual ? '経費シートの値に戻す' : '自分で入れる'; tg.hidden = manual && !ok && !isNum(ov); }
 }
 function renderInputsDyn(){
   var r=st.res, c=st.settings.cash;
   $('inSt').textContent = r.inputsReady ? '入力済み' : 'まだ';
-  var bh=$('balHint'), bi=document.querySelector('input[data-cash="balance"]');
-  if(bi) bi.disabled=!st.liveStat;
-  if(bh) bh.textContent = !st.liveStat ? (st.loading ? '実績を読み込み中…' : '実績を読み込むと入れられます（入金済みの数を基準にするため）')
-    : c.balanceDate ? mdOf(c.balanceDate)+' の残高'+(isNum(c.paidAtBalance)?'（その時の入金済み '+c.paidAtBalance+'件を基準）':'') : '';
+  var bh=$('hint_balanceStart'); if(bh) bh.textContent = c.balanceDate ? mdOf(c.balanceDate)+' に入力' : '1日の朝の口座残高';
+  var eh=$('hint_extraSpend'); if(eh) eh.textContent = c.extraSpendNote ? '内訳: '+c.extraSpendNote : '経費シートに載っていない支払い';
+  var ah=$('adBudgetHint'); if(ah) ah.textContent = c.addAdBudget!==false ? '広告費 '+E.fmtMan(st.settings.ads.monthlyBudget)+' を支払いに足しています' : '足していません';
+  renderAuto('spend'); renderAuto('other');
   $('inCalc').innerHTML = r.need!=null
-    ? '→ 必要 '+r.need+'件（追加 '+r.needAdd+'件）・口座に残す額0なら '+r.breakEven+'件'
-    : r.unitMissing ? '→ 1件あたり着金額を入れてください' : '→ 残高・残りの支払い・残す額が入ると、必要数が出ます';
+    ? '→ 必要 '+r.need+'件（口座に残す額0なら '+r.breakEven+'件）<small>'+esc(r.why.need)+'</small>'
+    : '→ '+esc(r.nextKind==='input' ? r.nextMove : '月初の口座残高を入れると必要数が出ます');
 }
 
 /* 月初の原文 */
 function assumptions(){
   var c=st.settings.cash, r=st.res;
-  return '残高'+E.fmtMan(c.balance)+'・残りの支払い'+E.fmtMan(c.spendRemain)+'・残す'+E.fmtMan(c.keep)+'・1件'+E.fmtMan(c.unitCash)+'・入金済み'+r.paid+'・勉強会'+r.seminars.length+'回・CPL'+(r.ad.cplNow!=null?E.fmtYen(r.ad.cplNow):'なし');
+  return '月初残高'+E.fmtMan(r.balanceStart)+'・支払い'+E.fmtMan(r.spend)+(r.spendSource==='manual'?'（自分で入力）':'（経費シート）')+'・シート外'+E.fmtMan(r.extraSpend)+(c.extraSpendNote?'（'+c.extraSpendNote+'）':'')+'・広告費'+E.fmtMan(r.adSpend)+'・他収入'+E.fmtMan(r.otherIncome)+'・残す'+E.fmtMan(c.keep)+'・1件'+E.fmtMan(c.unitCash)+'・勉強会'+r.seminars.length+'回・CPL'+(r.ad.cplNow!=null?E.fmtYen(r.ad.cplNow):'なし');
 }
 function renderSnap(){
   var r=st.res, s=r.snapshot;
@@ -737,6 +794,8 @@ function setRows(){
   p('ads.mtgToPaid','面談 → 入金','pct',0,1,0.01,'45%');
   p('ads.maxCostPerDeal','1件あたり広告費の上限','man',0,0,0,'25万円');
   p('ads.cplGuard','CPLガード','yen',2000,12000,100,'11/4確定 5,500円');
+  g('経費シート');
+  p('expense.tab','経費シートのタブ名','text',0,0,0,'空ならサーバーの既定のタブ。変えると読み直します');
   p('rates.adLagDays','友だち追加 → 面談までの日数','n',0,30,1,'友だち追加→面談 中央値12日・目標ボード実測');
   g('手で直す（ふだんは空でOK）');
   p('manual.paidOverride','入金済み（自動の数を上書き）','opt',0,0,0,'空なら自動');
@@ -761,7 +820,9 @@ function buildSettings(){
     if(r.g){ h+='<div class="sg">'+esc(r.g)+'</div>'; return; }
     var v=getP(st.settings, r.p);
     h+='<div class="sr"><div class="srh"><span class="sl">'+esc(r.l)+'</span>';
-    if(r.t==='man'||r.t==='opt'||r.t==='optman'){
+    if(r.t==='text'){
+      h+='<span class="si"><input type="text" data-p="'+esc(r.p)+'" data-t="text" value="'+esc(v||'')+'" placeholder="空なら既定" style="width:150px;text-align:left"></span></div>';
+    } else if(r.t==='man'||r.t==='opt'||r.t==='optman'){
       var shown = (r.t==='man'||r.t==='optman') ? manVal(v) : (isNum(v)?String(v):'');
       h+='<span class="si"><input type="number" inputmode="decimal" step="any" data-p="'+esc(r.p)+'" data-t="'+r.t+'" value="'+shown+'" placeholder="'+(r.t==='man'?'':'空')+'">'+(r.t==='opt'?'':'万円')+'</span></div>';
     } else {
@@ -821,7 +882,7 @@ function loadMock(){
     try{
       var x=new XMLHttpRequest();
       x.open('GET','mock_stat.json?_='+Date.now(),true);
-      x.onload=function(){ if((x.status===200||x.status===0) && x.responseText){ try{ var s=JSON.parse(x.responseText); resolve({ ok:true, asOf:s.asOf||'', ym:s.ym, stat:s, settings:null, settingsUpdated:null, meta:MOCK_META }); }catch(e){ reject(fail('server','mock unreadable')); } } else reject(fail('net','mock missing')); };
+      x.onload=function(){ if((x.status===200||x.status===0) && x.responseText){ try{ var s=JSON.parse(x.responseText), ex=s.expense||null; delete s.expense; if(Q.get('expense')==='0') ex={ ok:false, ym:s.ym, error:'11月の列が見つかりません' }; resolve({ ok:true, asOf:s.asOf||'', ym:s.ym, stat:s, settings:null, settingsUpdated:null, meta:MOCK_META, expense:ex }); }catch(e){ reject(fail('server','mock unreadable')); } } else reject(fail('net','mock missing')); };
       x.onerror=function(){ reject(fail('net','mock error')); };
       x.send();
     }catch(e){ reject(fail('net',e.message)); }
@@ -829,7 +890,8 @@ function loadMock(){
 }
 function getCockpit(){
   if(MOCK) return loadMock();
-  return fetchJSON(GAS+'?ll=cockpit&pin='+encodeURIComponent(getPin())+'&ym='+st.ym+'&_='+Date.now(), { method:'GET', redirect:'follow' });
+  var tab=String((st.settings.expense&&st.settings.expense.tab)||'').trim();
+  return fetchJSON(GAS+'?ll=cockpit&pin='+encodeURIComponent(getPin())+'&ym='+st.ym+(tab?'&etab='+encodeURIComponent(tab):'')+'&_='+Date.now(), { method:'GET', redirect:'follow' });
 }
 function postSettings(obj, extra){
   return fetchJSON(GAS+'?ll=cockpit_save&pin='+encodeURIComponent(getPin())+(extra||''), { method:'POST', body:JSON.stringify(obj), redirect:'follow' });
@@ -847,7 +909,8 @@ function showPin(msg){
 /* 読み込んだ結果を反映。startedAt＝その読み込みを始めた時刻（最後の保存より前なら設定は使わない） */
 function applyData(j, startedAt){
   var statOk = !!(j.stat && !j.stat.error && isNum(j.stat.paidMainCount));
-  if(statOk){ st.stat=j.stat; st.asOf=j.asOf || j.stat.asOf || st.asOf; st.fetchedAt=Date.now(); st.liveStat=true; }
+  if(statOk){ st.stat=j.stat; st.asOf=j.asOf || j.stat.asOf || st.asOf; st.fetchedAt=Date.now(); }
+  if(j.expense) st.expense=j.expense;
   else if(j.stat && j.stat.error) dlog('実績: '+j.stat.error);
   if(j.meta) st.meta=j.meta;
   var rebuild=false, fresh = startedAt >= st.lastSaveOkAt && !st.dirty && !st.pending && !j.settingsError;
@@ -857,14 +920,6 @@ function applyData(j, startedAt){
     st.secs={};
     if(JSON.stringify(ns)!==JSON.stringify(st.settings)){ st.settings=ns; rebuild=true; }
   } else if(j.settingsError) dlog('設定: '+j.settingsError);
-  // 残高を今日入れたのに基準の入金済みが空なら、届いたばかりの実績で埋める（キャッシュの実績は使わない）
-  if(statOk){
-    var c=st.settings.cash, mp=st.settings.manual.paidOverride;
-    if(isNum(c.balance) && c.paidAtBalance==null && c.balanceDate===isoDate(st.today)){
-      c.paidAtBalance = isNum(mp) ? mp : j.stat.paidMainCount;
-      markChanged('cash');
-    }
-  }
   writeCacheNow();
   if(rebuild) renderAll(); else render();
   setNote(MOCK ? 'mock' : (statOk ? '' : 'staterr'));
@@ -888,7 +943,7 @@ function refresh(){
 }
 
 /* 保存。base＝読み込んだ設定の updated。ふだんの保存は月初の原文を送らない（サーバーの原文を守る） */
-function payload(){ var b=clone(st.settings); b.snapshots={}; return b; }
+function payload(){ var b=E.mirrorCash(st.settings); b.snapshots={}; return b; }
 function saveMsg(e){
   var k=e&&e.kind;
   return k==='pin' ? 'PINを入れ直すと保存できます' : k==='net' ? 'つながらず保存できませんでした。この端末には残っています' : '保存できませんでした。この端末には残っています';
@@ -898,14 +953,14 @@ function save(o){
   if(st.saving) return Promise.resolve(false);
   var startN=st.changeN;
   if(MOCK){
-    if(o.adopt && o.body) st.settings=E.normalize(o.body, st.ym);
+    st.settings = E.mirrorCash(o.adopt && o.body ? E.normalize(o.body, st.ym) : st.settings);
     st.dirty=false; st.pending=false; st.secs={}; st.lastSaveOkAt=Date.now(); writeCacheNow(); renderAll();
     if(!o.silent) toast(o.okMsg || '保存しました（お試し表示なので、この端末だけ）');
     return Promise.resolve(true);
   }
   if(!getPin()){ showPin('保存にはPINが要ります'); $('pinCard').scrollIntoView({ behavior:'smooth', block:'center' }); return Promise.resolve(false); }
   st.saving=true; renderSaveBar();
-  var body=o.body || payload();
+  var body=o.body ? E.mirrorCash(o.body) : payload();
   var q='&base='+encodeURIComponent(st.settingsUpdated||'')+(o.force?'&force=1':'');
   return postSettings(body, q).then(function(j){
     if(j && j.error==='pin'){ onPinError(); throw fail('pin'); }
@@ -913,7 +968,7 @@ function save(o){
     if(!j || j.ok!==true) throw fail('server', 'save '+((j&&j.error)||''));
     st.settingsUpdated=j.updated||st.settingsUpdated; st.lastSaveOkAt=Date.now(); st.pending=false;
     if(st.changeN===startN){
-      if(o.adopt && o.body) st.settings=E.normalize(o.body, st.ym);
+      st.settings = o.adopt && o.body ? E.normalize(body, st.ym) : E.mirrorCash(st.settings);
       st.dirty=false; st.secs={};
     } else if(o.adopt && o.body) st.settings.snapshots=clone(o.body.snapshots);
     writeCacheNow();
@@ -987,9 +1042,14 @@ function hcSet(i,ok,tx,small){
 function raw(x){ return DEBUG && x ? String(x).slice(0,120) : ''; }
 function health(){
   var out=$('hcOut');
-  out.innerHTML='<li id="hc1"></li><li id="hc2"></li><li id="hc3"></li><li id="hc4"></li>';
-  hcSet(1,null,'サーバーにつながるか 確認中…'); hcSet(2,null,'保存の書き込みと読み戻し 確認中…'); hcSet(3,null,'セールス管理シートの実績 確認中…'); hcSet(4,null,'広告の数字（Meta） 確認中…');
-  function rest(tx){ hcSet(2,false,tx); hcSet(3,false,tx); hcSet(4,false,tx); }
+  var colLbl=(st.res?st.res.m:'')+'月列';
+  out.innerHTML='<li id="hc1"></li><li id="hc2"></li><li id="hc3"></li><li id="hc4"></li><li id="hc5"></li>';
+  hcSet(1,null,'サーバーにつながるか 確認中…'); hcSet(2,null,'保存の書き込みと読み戻し 確認中…'); hcSet(3,null,'セールス管理シートの実績 確認中…'); hcSet(4,null,'広告の数字（Meta） 確認中…'); hcSet(5,null,'経費シート（'+colLbl+'） 確認中…');
+  function rest(tx){ hcSet(2,false,tx); hcSet(3,false,tx); hcSet(4,false,tx); hcSet(5,false,tx); }
+  function hcExpense(x){
+    var ok=!!(x && x.ok && isNum(x.spendTotal));
+    hcSet(5, ok, ok ? '経費シートを読めた（'+colLbl+'）: 支払い '+E.fmtMan(x.spendTotal)+(x.tab?'・タブ「'+x.tab+'」':'') : '経費シートを読めませんでした（'+colLbl+'）', ok ? '' : '支払い合計は自分で入れられます'+(raw(x&&x.error)?'（'+raw(x.error)+'）':''));
+  }
   if(MOCK){
     loadMock().then(function(j){
       hcSet(1,true,'お試し表示: サンプルを読めました');
@@ -998,6 +1058,7 @@ function health(){
       hcSet(2,okRT,okRT?'この端末に書き込んで読み戻せました（お試し）':'この端末に書き込めませんでした');
       hcSet(3,isNum(j.stat.paidMainCount),'入金済み '+j.stat.paidMainCount+'件まで読めました（サンプル）');
       hcSet(4,!!(j.meta&&j.meta.ok), j.meta&&j.meta.ok ? '広告費・登録数を読めました（サンプル）' : '自動では取れませんでした（手入力で使えます）', j.meta&&j.meta.ok?'':metaReason(j.meta));
+      hcExpense(j.expense);
     }).catch(function(e){ hcSet(1,false,'サンプルを読めませんでした',raw(e&&e.message)); rest('確認できませんでした'); });
     return;
   }
@@ -1011,6 +1072,7 @@ function health(){
     hcSet(3,sOk, sOk ? 'セールス管理シートから入金済み '+j.stat.paidMainCount+'件まで読めました' : 'セールス管理シートの実績が読めませんでした', raw(j.stat&&j.stat.error));
     var m=j.meta||{};
     hcSet(4,!!m.ok, m.ok ? '広告費・登録数を自動で読めました' : '自動では取れませんでした（手入力で使えます）', m.ok?'':metaReason(m));
+    hcExpense(j.expense);
     var readOk = !j.settingsError;
     return postSettings({ at:new Date().toISOString(), build:BUILD }, '&key=health').then(function(w){
       var wOk = !!(w && w.ok===true && w.key==='health');
@@ -1093,14 +1155,30 @@ function wire(){
   });
   // 入力
   $('inFields').addEventListener('input', function(e){
-    var k=e.target.getAttribute('data-cash'); if(!k) return;
-    if(k==='balance' && !st.liveStat) return;
-    var n=parseFloat(String(e.target.value).replace(/,/g,''));
-    var f=null; IN_FIELDS.forEach(function(x){ if(x.k===k) f=x; });
-    var c=st.settings.cash;
-    c[k] = isNum(n) ? Math.round(n*10000) : (f && f.def!=null ? f.def : null);
-    if(k==='balance'){ c.balanceDate=isoDate(st.today); c.paidAtBalance = st.res.paid; }
-    touched('cash');
+    var c=st.settings.cash, n=parseFloat(String(e.target.value).replace(/,/g,''));
+    var k=e.target.getAttribute('data-cash'), ov=e.target.getAttribute('data-ov');
+    if(k){
+      var f=IN_FIELDS[k];
+      c[k] = isNum(n) ? Math.round(n*10000) : (f && f.def!=null ? f.def : null);
+      if(k==='balanceStart') c.balanceDate = isNum(n) ? isoDate(st.today) : '';
+      touched('cash');
+    } else if(ov){
+      c[ov] = isNum(n) ? Math.round(n*10000) : null;
+      touched('cash');
+    }
+  });
+  $('inFields').addEventListener('change', function(e){
+    var b=e.target.getAttribute('data-cashb'); if(!b) return;
+    st.settings.cash[b]=!!e.target.checked; touched('cash');
+  });
+  $('inFields').addEventListener('click', function(e){
+    var g=e.target; if(!g || !g.getAttribute) return;
+    var it=g.getAttribute('data-items');
+    if(it){ var l=$(it+'Items'); l.hidden=!l.hidden; if(!l.hidden) l.innerHTML=itemsHtml(it); return; }
+    var tg=g.getAttribute('data-toggle'); if(!tg) return;
+    var a=AUTO[tg], c=st.settings.cash, inp=document.querySelector('input[data-ov="'+a.ov+'"]');
+    if(isNum(c[a.ov]) || uiManual[tg]){ c[a.ov]=null; uiManual[tg]=false; if(inp) inp.value=''; touched('cash'); }
+    else { uiManual[tg]=true; if(inp){ var v = tg==='spend' ? st.res.spend : st.res.otherIncome; inp.value=manVal(v); } render(); if(inp) inp.focus(); }
   });
   $('inSave').addEventListener('click', function(){ save(); });
   $('saveBtn').addEventListener('click', function(){ save(); });
@@ -1112,6 +1190,7 @@ function wire(){
     if(t==='man') v = isNum(n) ? Math.round(n*10000) : getP(E.defaults(st.ym), p);
     else if(t==='optman') v = isNum(n) ? Math.round(n*10000) : null;
     else if(t==='opt') v = isNum(n) ? n : null;
+    else if(t==='text') v = String(rv||'').trim();
     else v = isNum(n) ? n : 0;
     setP(st.settings, p, v);
     return v;
@@ -1123,7 +1202,9 @@ function wire(){
     if(e.target.type==='range') render(); else touched(p.split('.')[0]);
   });
   $('setFields').addEventListener('change', function(e){
-    var p=e.target.getAttribute('data-p'); if(!p || e.target.type!=='range') return;
+    var p=e.target.getAttribute('data-p'); if(!p) return;
+    if(e.target.getAttribute('data-t')==='text'){ refresh(); return; }
+    if(e.target.type!=='range') return;
     setVal(e.target.getAttribute('data-t'), p, e.target.value);
     touched(p.split('.')[0]);
   });
@@ -1169,7 +1250,7 @@ function maybeReload(){
     st.today=now;
     var ym=now.getFullYear()+'-'+pad(now.getMonth()+1);
     if(ym!==st.ym){
-      st.ym=ym; st.stat=null; st.meta=null; st.asOf=''; st.fetchedAt=0; st.liveStat=false;
+      st.ym=ym; st.stat=null; st.meta=null; st.expense=null; st.asOf=''; st.fetchedAt=0;
       st.settings=E.normalize(st.settings, ym); renderAll();
     } else render();
   }
@@ -1197,7 +1278,7 @@ function boot(){
     st.today=td; st.ym=td.getFullYear()+'-'+pad(td.getMonth()+1);
     var c=readCache();
     if(c){
-      if(c.ym===st.ym){ st.stat=c.stat||null; st.meta=c.meta||null; st.asOf=c.asOf||''; st.fetchedAt=c.fetchedAt||0; }
+      if(c.ym===st.ym){ st.stat=c.stat||null; st.meta=c.meta||null; st.expense=c.expense||null; st.asOf=c.asOf||''; st.fetchedAt=c.fetchedAt||0; }
       st.dirty=!!c.dirty; st.pending=!!c.pending; st.settingsUpdated=c.settingsUpdated||''; st.secs=(c.secs&&typeof c.secs==='object')?c.secs:{};
     }
     if(c && c.settings) st.settings=E.normalize(c.settings, st.ym);
