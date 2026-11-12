@@ -127,6 +127,16 @@ section{padding:16px 16px 0;}
 .semB{font-size:12px; color:var(--plum); line-height:1.8;}
 .semB b{color:var(--plum2); font-variant-numeric:tabular-nums;}
 .semB .sub{font-size:10.5px; color:var(--sub); font-weight:700;}
+.semH .al.ad{background:var(--grad-blue);}
+.semN{font-size:10.5px; color:var(--sub); font-weight:700; margin-top:4px; line-height:1.5;}
+.semF{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; margin-top:8px;}
+.semF label{display:block; min-width:0;}
+.semF label span{display:block; font-size:10px; font-weight:800; color:var(--sub); line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.semF input{display:block; width:100%; margin-top:2px; border:1.5px solid var(--line); background:#fffdfd; border-radius:10px; padding:6px 4px; font-size:16px; text-align:center; -webkit-appearance:none; appearance:none; min-height:38px; font-variant-numeric:tabular-nums;}
+.semF input:focus{outline:none; border-color:var(--pink); box-shadow:0 0 0 3px rgba(240,162,197,.18);}
+.semHist{display:flex; flex-wrap:wrap; gap:4px; margin-top:6px;}
+.semHist span{font-size:10px; font-weight:700; color:var(--plum); background:var(--bg2); border:1px solid var(--line); border-radius:8px; padding:1px 7px; white-space:nowrap;}
+.semHist .lb{color:var(--sub); background:none; border-color:transparent; padding-left:0;}
 .addBtn{display:block; width:100%; border:1.5px dashed #e7c6d7; background:#fffafc; color:var(--pinkd); border-radius:14px; padding:10px; font-size:13px; font-weight:800; margin-top:10px;}
 .semAdd{margin-top:10px; padding:12px 14px; background:var(--bg2); border-radius:14px; border:1px solid var(--line);}
 .semAdd label{display:block; font-size:11.5px; font-weight:800; color:var(--plum); margin-bottom:8px;}
@@ -321,7 +331,7 @@ details > summary .st{margin-left:auto; font-size:10.5px; font-weight:800; color
     <button type="submit">ひらく</button>
   </form>
   <div id="pinMsg"></div>
-  <p id="pinHint" style="margin:10px 0 0; color:var(--sub); font-size:11.5px;">毎回PINを聞かれるときは、Safariでこのページを開き、URLの最後に <b>#k=</b> とPINを付けてから「ホーム画面に追加」してください。その印から開く限りPINは要りません。</p>
+  <p id="pinHint" style="margin:10px 0 0; color:var(--sub); font-size:11.5px;">PIN無しの専用リンク（URLの最後に <b>#k=</b>… が付いたもの）から開くと、この欄は出ません。聞かれたときは、そのリンクをもう一度開いてください。</p>
 </div>
 
 <section>
@@ -329,15 +339,16 @@ details > summary .st{margin-left:auto; font-size:10.5px; font-weight:800; color
 </section>
 
 <section>
-  <div class="sec-h"><span class="tag">勉強会</span><b id="semTitle">勉強会</b><small>参加人数を動かせます</small></div>
+  <div class="sec-h"><span class="tag">勉強会</span><b id="semTitle">勉強会</b><small>希望者・参加・決済を入れられます</small></div>
   <div class="card">
     <div id="semList"></div>
   </div>
   <button class="addBtn" id="semAddBtn" type="button">＋勉強会を足す</button>
   <div class="semAdd" id="semAdd" hidden>
     <label>日付<input type="date" id="saDate"></label>
-    <label>提携先<select id="saAl"><option value="famm">famm</option><option value="ABCash">ABCash</option><option value="SHE">SHE</option><option value="LiLI">LiLI</option></select></label>
-    <label>参加見込み（空なら中央値）<input type="number" id="saAtt" inputmode="numeric" min="0" step="1" placeholder="空なら中央値"></label>
+    <label>経路<select id="saAl"><option value="famm">famm</option><option value="ABCash">ABCash</option><option value="SHE">SHE</option><option value="LiLI">LiLI</option><option value="広告">広告（LINE勉強会・その場で決済）</option></select></label>
+    <label>希望者（申込。空でも可）<input type="number" id="saApp" inputmode="numeric" min="0" step="1" placeholder="例）60"></label>
+    <label>参加見込み（空なら 希望者×参加率、なければ中央値）<input type="number" id="saAtt" inputmode="numeric" min="0" step="1" placeholder="空でも可"></label>
     <div class="btnrow"><button type="button" class="btn-sub" id="saCancel">やめる</button><button type="button" class="btn-main" id="saOk">足す</button></div>
   </div>
 </section>
@@ -404,7 +415,7 @@ details > summary .st{margin-left:auto; font-size:10.5px; font-weight:800; color
   <button type="button" class="hc" id="hcBtn">🩺 ヘルスチェック</button>
   <ul id="hcOut"></ul>
   <div class="links"><a href="board.html">詳しいボード（旧）</a></div>
-  <p class="ver">今月の数字 v1</p>
+  <p class="ver">今月の数字 v1.1</p>
 </div>
 </div>
 
@@ -425,7 +436,7 @@ details > summary .st{margin-left:auto; font-size:10.5px; font-weight:800; color
 
 <div id="dbg" hidden></div>
 
-<script src="engine.js?v=20261112a"></script>
+<script src="engine.js?v=20261113a"></script>
 <script>
 (function(){
 'use strict';
@@ -437,11 +448,16 @@ var MOCK=Q.get('mock')==='1', DEBUG=Q.get('debug')==='1';
 var K_PIN='cockpit_pin', K_CACHE=MOCK?'cockpit_cache_v1_mock':'cockpit_cache_v1';
 var MOCK_META = Q.get('meta')==='0' ? { ok:false, error:'token未設定' } : { ok:true, spend:1130000, regs:226, cpl:5000, since:'2026-11-01', until:'2026-11-10', error:'' };
 var SEED={ '2026-11':[
+  // 11/11(水)21:00 広告LINEの勉強会（くみこ登壇・その場で決済）。希望者60→参加40。決済5はセールス管理シート 11/12 の広告経路（担当者なし）、意思あり12人は11/12のやり取りから
+  { id:'s0', alliance:'広告', date:'2026-11-11', applied:60, attend:40, paid:5, intent:12, note:'広告LINE勉強会（くみこ登壇）。決済5はシート11/12・意思12は11/12の見立て', ensure:true,
+    history:[ { at:'2026-11-12 09:00', paid:4, intent:12 }, { at:'2026-11-12 18:19', paid:5, intent:12 } ] },
   { id:'s1', alliance:'famm', date:'2026-11-18', attend:null, note:'' },
   { id:'s2', alliance:'ABCash', date:'2026-11-22', attend:null, note:'' },
   { id:'s3', alliance:'famm', date:'2026-11-28', attend:null, note:'' } ] };
+// 保存ずみの設定への一回だけの直し: ABCash 11/21 → 11/22(日)
+var SEED_FIX={ '2026-11':[ { match:{ alliance:'ABCash', date:'2026-11-21' }, set:{ date:'2026-11-22' } } ] };
 var SEED_SNAP={ '2026-11':{ date:'2026-11-01', need:45, low:24, mid:33, high:42, promise:33, note:'月初の原文' } };
-var BUILD = '20261112a'; // engine.js?v= と E.VERSION を同じにする
+var BUILD = '20261113a'; // engine.js?v= と E.VERSION を同じにする
 var E=window.CockpitEngine;
 var memPin='';
 var SECS=['cash','seminars','ads','rates','manual','promiseManual','snapshots','expense'];
@@ -555,19 +571,23 @@ function renderPaid(){
 }
 
 /* 勉強会: 構造は buildSeminars、数字は renderSemDyn */
-function semMax(s){ var med=0; try{ med=st.settings.rates.seminar[E.viaKey(s.alliance)].attendMedian||0; }catch(e){} return Math.max(60, Math.ceil(med*2.5), (s.attend||0)+10); }
+function semMax(s){ var med=0; try{ med=st.settings.rates.seminar[E.viaKey(s.alliance)].attendMedian||0; }catch(e){} return Math.max(60, Math.ceil(med*2.5), (s.attend||0)+10, (s.applied||0)+10); }
 function buildSeminars(){
   var list=(st.settings.seminars||[]).slice().sort(function(a,b){ return String(a.date).localeCompare(String(b.date)); });
   st.settings.seminars=list;
   var h='';
   if(!list.length) h='<div class="sem"><div class="semB"><span class="sub">今月の勉強会はまだありません。下の「＋勉強会を足す」から入れられます</span></div></div>';
   list.forEach(function(s){
-    var id=esc(s.id);
+    var id=esc(s.id), key=E.viaKey(s.alliance);
+    var fld=function(k,l){ return '<label><span>'+l+'</span><input type="number" inputmode="numeric" min="0" step="1" data-semf="'+k+'" data-id="'+id+'" placeholder="—" aria-label="'+l+'"></label>'; };
     h+='<div class="sem whyhost" data-id="'+id+'">'
-      +'<div class="semH"><b class="d" id="semD_'+id+'"></b><span class="al">'+esc(E.viaKey(s.alliance))+'</span><button type="button" class="del" data-del="'+id+'">外す</button></div>'
+      +'<div class="semH"><b class="d" id="semD_'+id+'"></b><span class="al'+(key==='広告'?' ad':'')+'">'+esc(key)+'</span><button type="button" class="del" data-del="'+id+'">外す</button></div>'
+      +(s.note?'<div class="semN">'+esc(s.note)+'</div>':'')
       +'<div class="semA" id="semA_'+id+'"></div>'
       +'<input type="range" data-sem="'+id+'" min="0" max="'+semMax(s)+'" step="1" aria-label="参加人数">'
+      +'<div class="semF" id="semF_'+id+'">'+fld('applied','希望者')+fld('attend','参加')+fld('paid','決済')+fld('intent','意思・未決済')+'</div>'
       +'<div class="semB" id="semB_'+id+'"></div>'
+      +'<div class="semHist" id="semHist_'+id+'" hidden></div>'
       +'<div class="whyline" hidden></div></div>';
   });
   $('semList').innerHTML=h;
@@ -576,30 +596,61 @@ function renderSemDyn(){
   var r=st.res;
   $('semTitle').textContent='勉強会（'+r.seminars.length+'回）';
   r.seminars.forEach(function(s){
-    var a=$('semA_'+s.id), b=$('semB_'+s.id), d=$('semD_'+s.id);
+    var a=$('semA_'+s.id), b=$('semB_'+s.id), d=$('semD_'+s.id), fw=$('semF_'+s.id), hw=$('semHist_'+s.id);
     if(!a||!b) return;
-    d.textContent=s.dateLabel;
+    d.textContent=s.dateLabel+(s.past?'　開催済み':'');
+    var raw=findSem(s.id)||{};
     var rng=document.querySelector('input[data-sem="'+s.id+'"]');
     if(rng){
-      rng.disabled=!s.active;
+      rng.hidden=s.past; rng.disabled=!s.active;
       if(document.activeElement!==rng && String(Math.round(s.attend))!==rng.value) rng.value=Math.round(s.attend);
     }
-    a.innerHTML='参加 <b>'+f1(s.attend)+'</b>人'+(s.attendIsMedian?'<small>（中央値）</small>':(s.active&&s.hasRates?'<button type="button" class="mini" data-median="'+esc(s.id)+'">中央値に戻す</button>':''));
-    var h='';
-    if(s.past) h='<span class="chip gray">実績に移行</span> <span class="sub">結果は「見えている分」に入っています</span>';
+    if(fw){
+      var ins=fw.querySelectorAll('input[data-semf]');
+      for(var i=0;i<ins.length;i++){
+        var inp=ins[i], k=inp.getAttribute('data-semf'), v=raw[k];
+        inp.parentNode.hidden = (k==='paid'||k==='intent') && !s.past;
+        if(document.activeElement!==inp) inp.value = isNum(v) ? String(v) : '';
+        inp.placeholder = (k==='attend' && !s.past) ? String(Math.round(s.attend)) : '—';
+      }
+    }
+    if(s.past){
+      a.innerHTML=(isNum(s.applied)?'希望者 <b>'+f1(s.applied)+'</b> → ':'')+'参加 <b>'+(isNum(raw.attend)?f1(raw.attend):'—')+'</b>人'+(s.attendRateActual!=null?'<small>（参加率 '+pctS(s.attendRateActual)+'）</small>':'');
+    } else {
+      var from = s.attendFrom==='median' ? '<small>（中央値）</small>'
+        : s.attendFrom==='applied' ? '<small>（希望者'+f1(s.applied)+' × '+pctS(s.attendRate)+'）</small>'
+        : (s.active&&s.hasRates?'<button type="button" class="mini" data-median="'+esc(s.id)+'">中央値に戻す</button>':'');
+      a.innerHTML='参加 <b>'+f1(s.attend)+'</b>人'+from;
+    }
+    var h='', rateName = s.direct ? '決済率' : '成約率';
+    if(s.past){
+      if(isNum(s.paid)||isNum(s.intent)){
+        h+='<div class="tap" data-why="sem_'+esc(s.id)+'" style="display:inline">決済 <b>'+(isNum(s.paid)?f1(s.paid):'—')+'</b>件'+(s.payRateActual!=null?'<span class="sub">（参加の'+pctS(s.payRateActual)+'）</span>':'')+'・意思あり未決済 <b>'+(isNum(s.intent)?f1(s.intent):'—')+'</b>人 → <b>+'+f1(s.intentE)+'</b> 見込み</div>';
+        h+='<div class="sub">決済ずみは「入金済み」に入っています。意思あり × '+pctS(s.intentRate)+' を「見えている分」に足しています</div>';
+      } else h+='<span class="chip gray">開催済み</span> <span class="sub">決済・意思の数を入れると見込みに足します'+(s.direct?'':'。面談に進んだ分は「見えている分」に入っています')+'</span>';
+    }
     else if(s.outOfMonth) h='<span class="chip gray">今月の外</span> <span class="sub">今月の見込みには入れていません</span>';
-    else if(!s.hasRates) h='<span class="sub">この提携先の率が未設定です</span>';
+    else if(!s.hasRates) h='<span class="sub">この経路の率が未設定です</span>';
     else{
-      h+='<div class="tap" data-why="sem_'+esc(s.id)+'" style="display:inline">面談 <b>'+f1(s.mtgs)+'</b> → 成約 <b>'+f1(s.deals)+'</b> → 今月入金 <b>'+f1(s.thisMonth)+'</b> 見込み</div>';
+      if(s.direct) h+='<div class="tap" data-why="sem_'+esc(s.id)+'" style="display:inline">その場で決済 <b>'+f1(s.deals)+'</b> → 今月入金 <b>'+f1(s.thisMonth)+'</b> 見込み</div>';
+      else h+='<div class="tap" data-why="sem_'+esc(s.id)+'" style="display:inline">面談 <b>'+f1(s.mtgs)+'</b> → 成約 <b>'+f1(s.deals)+'</b> → 今月入金 <b>'+f1(s.thisMonth)+'</b> 見込み</div>';
       if(!st.stat) h+='<div class="sub">実績を読み込むと出ます</div>';
       else if(s.needDeals==null) h+='<div class="sub">必要は「入力」を入れると出ます</div>';
       else{
-        var chip = s.verdictKind==='pink' ? '<span class="chip pink">過去最高75%</span>' : s.verdictKind==='lav' ? '<span class="chip lav">成約率を上げれば</span>' : '<span class="chip blue">届く範囲</span>';
-        h+='<div><span class="tap" data-why="semNeed_'+esc(s.id)+'">必要 <b>'+f1(s.needDeals)+'</b>件＝成約率 <b>'+(isFinite(s.needRate)?pctS(s.needRate):'—')+'</b></span> '+chip+'</div>';
-        if(s.needAttend) h+='<div class="sub">いまの成約率'+pctS(s.rate)+'のままなら参加 '+s.needAttend+'人ぶん</div>';
+        var chip='<span class="chip '+(s.verdictKind==='pink'?'pink':s.verdictKind==='lav'?'lav':'blue')+'">'+esc(s.verdict||'届く範囲')+'</span>';
+        h+='<div><span class="tap" data-why="semNeed_'+esc(s.id)+'">必要 <b>'+f1(s.needDeals)+'</b>件＝'+rateName+' <b>'+(isFinite(s.needRate)?pctS(s.needRate):'—')+'</b></span> '+chip+'</div>';
+        if(s.needAttend) h+='<div class="sub">いまの'+rateName+pctS(s.rate)+'のままなら参加 '+s.needAttend+'人ぶん</div>';
       }
     }
     b.innerHTML=h;
+    if(hw){
+      var hs=s.history||[];
+      if(s.past && hs.length){
+        var hh='<span class="lb">履歴</span>';
+        hs.slice(-8).forEach(function(x){ hh+='<span>'+esc(histLabel(x.at))+' 決済'+(isNum(x.paid)?x.paid:'—')+'・意思'+(isNum(x.intent)?x.intent:'—')+'</span>'; });
+        hw.innerHTML=hh; hw.hidden=false;
+      } else { hw.innerHTML=''; hw.hidden=true; }
+    }
   });
 }
 
@@ -645,6 +696,7 @@ function renderVis(){
   h+=row('judge','判断待ち','7日以内 '+l.judge7N+'・8〜21日 '+l.judge21N+'・22日超 '+l.judgeOverN, l.judgeN, l.judgeE);
   h+=row('upcoming','面談予定', (l.upLateN?r.dates.safe+'より後 '+l.upLateN+'件':'')+(l.upReschN?(l.upLateN?'・':'')+'リスケ中 '+l.upReschN+'件':''), l.upN, l.upE);
   h+=row('resched','リスケ（日付なし）', l.reschedRecentUsed?'最後の面談が45日以内':'', l.reschedN, l.reschedE);
+  if(l.semIntentN) h+=row('semIntent','勉強会の決済待ち','意思あり・未決済', l.semIntentN, l.semIntentE);
   h+='<div class="sep"></div><div class="tot" data-why="l2"><span>これからの新規</span><span>'+f1(r.l2)+' 見込み</span></div>';
   function row2(why,k,e){ return '<div class="tr" data-why="'+why+'"><span class="k">'+k+'</span><span class="n"><b>'+f1(e)+'</b></span></div>'; }
   h+=row2('l2','勉強会（今月入金分）', r.semTotal);
@@ -756,7 +808,8 @@ var SRC_SEM={
   famm:{ attendMedian:'直近 34・29・27 の中央値', attendMax:'直近の最大（次の一手の試算に使います）', book:'予約率 25%', firstHalfPay:'前半開催 78.8%', secondHalfPay:'後半開催 15.4%' },
   ABCash:{ attendMedian:'中央値 18', attendMax:'空なら試算しません', book:'予約率 15%', firstHalfPay:'前半開催 70%', secondHalfPay:'後半開催 24%' },
   SHE:{ attendMedian:'既定', attendMax:'空なら試算しません', book:'既定', firstHalfPay:'前半開催 79%', secondHalfPay:'後半開催 4%' },
-  LiLI:{ attendMedian:'既定', attendMax:'空なら試算しません', book:'既定', firstHalfPay:'既定', secondHalfPay:'既定' }
+  LiLI:{ attendMedian:'既定', attendMax:'空なら試算しません', book:'既定', firstHalfPay:'既定', secondHalfPay:'既定' },
+  '広告':{ attendMedian:'11/11 参加40（希望者60）', attendMax:'11/11 の40', direct:'11/11 翌日まで決済5/40=12.5% ＋ 意思あり12人の見立て → 22%', firstHalfPay:'その場〜数日で決済 90%', secondHalfPay:'後半開催 50%' }
 };
 function setRows(){
   var R=[];
@@ -775,14 +828,18 @@ function setRows(){
   g('経路別の成約率');
   Object.keys(st.settings.rates.byVia).forEach(function(k){ p('rates.byVia.'+k,k,'pct',0,1,0.01,SRC_VIA[k]||'既定'); });
   g('勉強会');
+  var semDef=E.defaults(st.ym).rates.seminar;
   Object.keys(st.settings.rates.seminar).forEach(function(k){
-    var s=SRC_SEM[k]||{};
+    var s=SRC_SEM[k]||{}, cur=st.settings.rates.seminar[k]||{}, direct = isNum(cur.direct) || !!(semDef[k] && isNum(semDef[k].direct));
     p('rates.seminar.'+k+'.attendMedian',k+' 参加の中央値','n',0,80,1,s.attendMedian||'既定');
     p('rates.seminar.'+k+'.attendMax',k+' 参加の直近最大','opt',0,0,0,s.attendMax||'空なら試算しません');
-    p('rates.seminar.'+k+'.book',k+' 予約率','pct',0,0.6,0.01,s.book||'既定');
+    if(direct) p('rates.seminar.'+k+'.direct',k+' 直接決済率（参加 → 決済）','pct',0,0.6,0.01,s.direct||'既定');
+    else p('rates.seminar.'+k+'.book',k+' 予約率','pct',0,0.6,0.01,s.book||'既定');
     p('rates.seminar.'+k+'.firstHalfPay',k+' 前半開催の今月入金','pct',0,1,0.01,s.firstHalfPay||'既定');
     p('rates.seminar.'+k+'.secondHalfPay',k+' 後半開催の今月入金','pct',0,1,0.01,s.secondHalfPay||'既定');
   });
+  p('rates.semAttendRate','希望者 → 参加（希望者だけ分かる時）','pct',0,1,0.01,'11/11 希望者60 → 参加40 = 67%');
+  p('rates.semIntent','勉強会の決済待ち（意思あり・未決済） → 入金','pct',0,1,0.01,'11/11組の見立て 12人 → 4.6件');
   g('これからの新規');
   p('rates.bucketNewPerMonth','BUCKET新規（月）','n',0,20,0.5,'安定推計8の半分（11/10時点）');
   p('rates.otherPerMonth','その他の新規（月）','n',0,10,0.5,'既定');
@@ -921,9 +978,12 @@ function applyData(j, startedAt){
     st.secs={};
     if(JSON.stringify(ns)!==JSON.stringify(st.settings)){ st.settings=ns; rebuild=true; }
   } else if(j.settingsError) dlog('設定: '+j.settingsError);
+  var migrated=migrateSeminars();
+  if(migrated){ markChanged('seminars'); rebuild=true; }
   writeCacheNow();
   if(rebuild) renderAll(); else render();
   setNote(MOCK ? 'mock' : (statOk ? '' : 'staterr'));
+  if(migrated && !MOCK && getPin()) save({ silent:true });   // 足した回・直した日付はサーバーにも残す
 }
 function refresh(){
   if(!MOCK && !getPin()){ showPin(''); renderInputsDyn(); return Promise.resolve(); }
@@ -1117,15 +1177,18 @@ function wire(){
     $('pinCard').scrollIntoView({ behavior:'smooth', block:'center' });
   });
   // 勉強会: 動かしている間は試し表示、指を離したら変更として記録
+  function semField(t){ var f=t.getAttribute('data-semf'); if(!f) return null; var s=findSem(t.getAttribute('data-id')); if(!s) return null; var n=parseFloat(t.value); s[f]=isNum(n)?n:null; return { s:s, f:f }; }
   $('semList').addEventListener('input', function(e){
-    var id=e.target.getAttribute('data-sem'); if(!id) return;
-    var s=findSem(id); if(!s) return;
-    s.attend=+e.target.value; render();
+    var id=e.target.getAttribute('data-sem');
+    if(id){ var s=findSem(id); if(s){ s.attend=+e.target.value; render(); } return; }
+    if(semField(e.target)) render();
   });
   $('semList').addEventListener('change', function(e){
-    var id=e.target.getAttribute('data-sem'); if(!id) return;
-    var s=findSem(id); if(!s) return;
-    s.attend=+e.target.value; touched('seminars');
+    var id=e.target.getAttribute('data-sem');
+    if(id){ var s=findSem(id); if(s){ s.attend=+e.target.value; touched('seminars'); } return; }
+    var x=semField(e.target); if(!x) return;
+    if(x.f==='paid'||x.f==='intent') pushHist(x.s);   // 決済・意思を直したら履歴に積む
+    touched('seminars');
   });
   $('semList').addEventListener('click', function(e){
     var g=e.target.getAttribute ? e.target : null; if(!g) return;
@@ -1141,11 +1204,11 @@ function wire(){
   $('semAddBtn').addEventListener('click', function(){ $('semAdd').hidden=false; $('semAddBtn').hidden=true; $('saDate').value=isoDate(st.today); });
   $('saCancel').addEventListener('click', function(){ $('semAdd').hidden=true; $('semAddBtn').hidden=false; });
   $('saOk').addEventListener('click', function(){
-    var d=$('saDate').value, al=$('saAl').value, at=$('saAtt').value;
+    var d=$('saDate').value, al=$('saAl').value, at=$('saAtt').value, ap=parseFloat($('saApp').value);
     if(!/^\d{4}-\d{2}-\d{2}$/.test(d)){ $('saDate').focus(); return; }
     var n=parseFloat(at);
-    st.settings.seminars.push({ id:'s'+Date.now().toString(36), alliance:al, date:d, attend:isNum(n)?n:null, note:'' });
-    $('semAdd').hidden=true; $('semAddBtn').hidden=false; $('saAtt').value='';
+    st.settings.seminars.push({ id:'s'+Date.now().toString(36), alliance:al, date:d, applied:isNum(ap)?ap:null, attend:isNum(n)?n:null, paid:null, intent:null, history:[], note:'' });
+    $('semAdd').hidden=true; $('semAddBtn').hidden=false; $('saAtt').value=''; $('saApp').value='';
     markChanged('seminars'); renderAll();
   });
   // 広告（スライダーは試しだけ・保存しない）
@@ -1243,6 +1306,34 @@ function wire(){
   window.addEventListener('pageshow', function(e){ if(e && e.persisted) maybeReload(); });
 }
 function findSem(id){ var f=null; (st.settings.seminars||[]).forEach(function(s){ if(s.id===id) f=s; }); return f; }
+function seedSeminars(){ return (SEED[st.ym]||[]).map(function(s){ var c=clone(s); delete c.ensure; return c; }); }
+/* 保存ずみの勉強会に、足りない回（SEEDの ensure）と一回だけの直し（SEED_FIX）を当てる。変えたら true */
+function migrateSeminars(){
+  if(!st.settings) return false;
+  var list=st.settings.seminars||[], changed=false;
+  function same(s,al,dt){ return E.viaKey(s.alliance)===E.viaKey(al) && String(s.date)===dt; }
+  (SEED[st.ym]||[]).forEach(function(sd){
+    if(!sd.ensure) return;
+    if(!list.some(function(s){ return same(s,sd.alliance,sd.date); })){ var c=clone(sd); delete c.ensure; list.push(c); changed=true; }
+  });
+  (SEED_FIX[st.ym]||[]).forEach(function(fx){
+    if(list.some(function(s){ return same(s,fx.match.alliance,fx.set.date); })) return;
+    list.forEach(function(s){ if(same(s,fx.match.alliance,fx.match.date)){ Object.keys(fx.set).forEach(function(k){ s[k]=fx.set[k]; }); changed=true; } });
+  });
+  if(changed){ st.settings.seminars=list; st.settings=E.normalize(st.settings, st.ym); }
+  return changed;
+}
+function histAt(){ var n=new Date(); return isoDate(n)+' '+pad(n.getHours())+':'+pad(n.getMinutes()); }
+function histLabel(at){ var a=/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/.exec(String(at||'')); return a ? (+a[2])+'/'+(+a[3])+' '+(+a[4])+':'+a[5] : String(at||''); }
+/* 決済・意思の数を変えたら履歴に積む。同じ数字は積まない。同じ日の同じ時間帯（1時間）は置き換え。40件まで */
+function pushHist(s){
+  var h=s.history=Array.isArray(s.history)?s.history:[], at=histAt();
+  var e={ at:at, paid:isNum(s.paid)?s.paid:null, intent:isNum(s.intent)?s.intent:null };
+  var last=h.length?h[h.length-1]:null;
+  if(last && last.paid===e.paid && last.intent===e.intent) return;
+  if(last && String(last.at).slice(0,13)===at.slice(0,13)) h[h.length-1]=e; else h.push(e);
+  if(h.length>40) h.splice(0,h.length-40);
+}
 function maybeReload(){
   if(document.visibilityState && document.visibilityState!=='visible') return;
   var now=new Date(), newDay = !MOCK && isoDate(now)!==isoDate(st.today);
@@ -1274,12 +1365,11 @@ function showFatal(html){
 }
 function boot(){
   try{
-    // ホーム画面のリンクに #k=PIN が付いていれば、この端末の記憶が消えていても使う。読み取ったらURLから消す
+    // 専用リンクの #k=（コックピット専用キー）。URLには残す（ブックマーク／ホーム画面に追加しても一緒に残るように）。保存ずみの値より優先
     var hk=/[#&]k=([^&]+)/.exec(location.hash||'');
     if(hk){
       var kv=''; try{ kv=decodeURIComponent(hk[1]); }catch(e){ kv=hk[1]; }
-      if(kv && !lsGet(K_PIN)){ if(!lsSet(K_PIN, kv)) memPin=kv; }
-      try{ history.replaceState(null, '', location.pathname+location.search); }catch(e){}
+      if(kv){ if(!lsSet(K_PIN, kv)) memPin=kv; }
     }
     var td=new Date();
     if(MOCK){ var qt=/^(\d{4})-(\d{2})-(\d{2})$/.exec(Q.get('today')||''); td = qt ? new Date(+qt[1], +qt[2]-1, +qt[3]) : new Date(2026,10,10); }
@@ -1292,9 +1382,10 @@ function boot(){
     if(c && c.settings) st.settings=E.normalize(c.settings, st.ym);
     else {
       st.settings=E.normalize(null, st.ym);
-      st.settings.seminars=clone(SEED[st.ym]||[]);
+      st.settings.seminars=seedSeminars();
       if(SEED_SNAP[st.ym]) st.settings.snapshots[st.ym]=clone(SEED_SNAP[st.ym]);
     }
+    migrateSeminars();
     wire();
     renderAll();
     if(!st.res.inputsReady) $('inD').open=true;

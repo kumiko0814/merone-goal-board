@@ -8,10 +8,11 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  var VERSION = '20261112a'; // index.html の BUILD と一致させる
+  var VERSION = '20261113a'; // index.html の BUILD と一致させる
   var WD = ['日', '月', '火', '水', '木', '金', '土'];
   var RESCHED_SHOW = 0.10, RESCHED_PAID = 0.45; // 日付なしリスケ（§5 層1）
   var STRONG_RATE = 0.6, RATE_CEIL = 0.75;      // 次の一手の上積み試算・過去最高の成約率
+  var DIRECT_CEIL = 0.30;                        // 直接決済型（広告の勉強会）の決済率の上限目安（11/11 参加40→決済5＋意思12 から）
 
   function defaults(ym) {
     return {
@@ -30,12 +31,15 @@
       rates: {
         verbal: 0.31, loan: 0.5, judge7: 0.35, judge21: 0.15, judgeOver: 0.05,
         show: 0.8, reschedShow: 0.5, sameMonthPay: 0.85, lateMonthPay: 0.3,
+        semAttendRate: 0.67, semIntent: 0.35, // 希望者→参加（11/11 60→40）／勉強会の決済待ち（意思あり・未決済）→入金
         byVia: { famm: 0.35, ABCash: 0.65, SHE: 0.5, BUCKET: 0.47, '広告': 0.45, LiLI: 0.5, 'その他': 0.5 },
         seminar: {
           famm: { attendMedian: 29, attendMax: 34, book: 0.25, firstHalfPay: 0.75, secondHalfPay: 0.15 },
           ABCash: { attendMedian: 18, attendMax: null, book: 0.15, firstHalfPay: 0.70, secondHalfPay: 0.25 },
           SHE: { attendMedian: 30, attendMax: null, book: 0.20, firstHalfPay: 0.79, secondHalfPay: 0.04 },
-          LiLI: { attendMedian: 25, attendMax: null, book: 0.10, firstHalfPay: 0.70, secondHalfPay: 0.20 }
+          LiLI: { attendMedian: 25, attendMax: null, book: 0.10, firstHalfPay: 0.70, secondHalfPay: 0.20 },
+          // 広告LINEの勉強会は面談を挟まず、その場で決済（direct = 参加→決済の率。11/11: 参加40・翌日まで決済5・意思12 → 見立て22%）
+          '広告': { attendMedian: 40, attendMax: 40, book: null, direct: 0.22, firstHalfPay: 0.90, secondHalfPay: 0.50 }
         },
         bucketNewPerMonth: 4, otherPerMonth: 1.5,
         lowFactorNew: 0.7, highFactorNew: 1.3,
@@ -67,6 +71,14 @@
     var s = deepMerge(d, saved);
     delete s._health;
     if (!Array.isArray(s.seminars)) s.seminars = [];
+    // 勉強会の項目をそろえる: 希望者 applied・参加 attend・決済 paid・意思あり未決済 intent・履歴 history（2026-11-13）
+    s.seminars = s.seminars.filter(isObj).map(function (x) {
+      var o = clone(x);
+      ['applied', 'attend', 'paid', 'intent'].forEach(function (k) { if (num(o[k]) == null) o[k] = null; });
+      if (!Array.isArray(o.history)) o.history = [];
+      o.note = o.note == null ? '' : String(o.note);
+      return o;
+    });
     if (!isObj(s.snapshots)) s.snapshots = {};
     if (!isObj(s.cashByMonth)) s.cashByMonth = {};
     if (!isObj(s.expense)) s.expense = { tab: '' };
@@ -222,41 +234,64 @@
     var reschedE = reschedN * RESCHED_SHOW * RESCHED_PAID;
     why.resched = '日付の決まっていないリスケ' + (reschedRecentUsed ? '（最後の面談が45日以内）' : '') + reschedN + '件 × ' + pct(RESCHED_SHOW) + ' × ' + pct(RESCHED_PAID) + ' = ' + f1(reschedE);
 
-    var l1 = verbalE + judgeE + upE + reschedE;
-    var l1Low = 0 + judgeE * 0.5 + upLow + reschedE;
-    var l1High = (verbalN + loanN) + judgeE * 1.5 + upE + reschedE;
-    why.l1 = '見えている分 = 口頭合意' + f1(verbalE) + ' ＋ 判断待ち' + f1(judgeE) + ' ＋ 面談予定' + f1(upE) + ' ＋ リスケ' + f1(reschedE) + ' = ' + f1(l1);
-
-    // ---- 層2 これからの新規 ----
+    // ---- 勉強会（開催前は層2の新規、開催済みは実績: 決済は入金済みに入っているので足さず、意思あり・未決済だけ層1へ） ----
+    var attendRate = num(R.semAttendRate) != null ? R.semAttendRate : 0.67;
+    var intentRate = num(R.semIntent) != null ? R.semIntent : 0.35;
     var seminars = (S.seminars || []).map(function (s) {
       var a = viaKey(s.alliance), sr = (R.seminar || {})[a] || null;
+      var direct = !!(sr && num(sr.direct) != null);            // 直接決済型（勉強会の場で決済。面談を挟まない）
       var d = dayInMonth(s.date, y, m), k = dateKey(s.date);
       var past = k != null && k < tKey;
       var outOfMonth = d == null;
       var median = sr ? nz(sr.attendMedian) : 0;
+      var applied = num(s.applied);
       var attendSet = num(s.attend);
-      var attend = attendSet != null ? attendSet : median;
-      var book = sr ? nz(sr.book) : 0, v = viaRate(R, a);
-      var mtgs = attend * book * R.show;
-      var deals = mtgs * v;
+      var attendFrom = attendSet != null ? 'set' : (applied != null ? 'applied' : 'median');
+      var attend = attendFrom === 'set' ? attendSet : (attendFrom === 'applied' ? applied * attendRate : median);
+      var book = sr && !direct ? nz(sr.book) : 0, v = direct ? nz(sr.direct) : viaRate(R, a);
+      var mtgs = direct ? null : attend * book * R.show;
+      var deals = direct ? attend * v : mtgs * v;
       var first = d != null && d <= bookLine;
       var payRate = sr ? (first ? nz(sr.firstHalfPay) : nz(sr.secondHalfPay)) : 0;
       var active = !past && !outOfMonth && !!sr;
       var thisMonth = active ? deals * payRate : 0;
+      var paidN = num(s.paid), intentN = num(s.intent);
+      var intentE = past && intentN != null ? intentN * intentRate : 0;
+      var attendRateActual = past && applied != null && applied > 0 && attendSet != null ? attendSet / applied : null;
+      var payRateActual = past && attendSet != null && attendSet > 0 && paidN != null ? paidN / attendSet : null;
       var o = {
         id: s.id, alliance: a, date: s.date, dateLabel: d != null ? fmtMD(y, m, d) : String(s.date || ''),
-        past: past, outOfMonth: outOfMonth, hasRates: !!sr, active: active,
-        attend: attend, attendIsMedian: attendSet == null, median: median, attendMax: sr ? num(sr.attendMax) : null,
+        past: past, outOfMonth: outOfMonth, hasRates: !!sr, active: active, direct: direct,
+        applied: applied, attend: attend, attendFrom: attendFrom, attendIsMedian: attendFrom === 'median', attendRate: attendRate, median: median, attendMax: sr ? num(sr.attendMax) : null,
         book: book, rate: v, mtgs: mtgs, deals: deals, payRate: payRate, firstHalf: first, thisMonth: thisMonth,
+        paid: paidN, intent: intentN, intentE: intentE, intentRate: intentRate, attendRateActual: attendRateActual, payRateActual: payRateActual,
+        history: Array.isArray(s.history) ? clone(s.history) : [], note: s.note == null ? '' : String(s.note),
         needDeals: null, needRate: null, verdict: null, verdictKind: null, needAttend: null
       };
-      why['sem_' + s.id] = past ? 'この回はもう開催済み。結果は「見えている分」（面談予定・判断待ち）に入っています'
+      var attendTx = '参加' + f1(attend) + (attendFrom === 'median' ? '（中央値）' : attendFrom === 'applied' ? '（希望者' + f1(applied) + ' × 参加率' + pct(attendRate) + '）' : '');
+      var lineTx = '（' + (first ? '予約ラインより前' : '予約ラインより後') + '）';
+      why['sem_' + s.id] = past
+        ? ('開催済み' + (applied != null ? '。希望者' + f1(applied) : '') + (attendSet != null ? (applied != null ? ' → ' : '。') + '参加' + f1(attendSet) + (attendRateActual != null ? '（参加率' + pct(attendRateActual) + '）' : '') : '')
+          + (paidN != null ? '。決済' + f1(paidN) + '件' + (payRateActual != null ? '（参加の' + pct(payRateActual) + '）' : '') + 'は「入金済み」に入っています' : '')
+          + (intentN != null ? '。意思あり・未決済' + f1(intentN) + '人 × ' + pct(intentRate) + ' = ' + f1(intentE) + ' を「見えている分」に足しています'
+            : (direct ? '。決済・意思の数を入れると見込みに足します' : '。面談に進んだ分は「見えている分」（面談予定・判断待ち）に入っています')))
         : outOfMonth ? 'この回は今月の外なので、今月の見込みには入れていません'
-        : !sr ? 'この提携先の率が未設定なので 0 として計算しています'
-        : '参加' + f1(attend) + (attendSet == null ? '（中央値）' : '') + ' × 予約' + pct(book) + ' × 実施' + pct(R.show) + ' = 面談' + f1(mtgs) + ' → × 成約' + pct(v) + ' = ' + f1(deals) + ' → × 今月入金' + pct(payRate) + '（' + (first ? '予約ラインより前' : '予約ラインより後') + '） = ' + f1(thisMonth);
+        : !sr ? 'この経路の率が未設定なので 0 として計算しています'
+        : direct ? attendTx + ' × 直接決済' + pct(v) + ' = ' + f1(deals) + ' → × 今月入金' + pct(payRate) + lineTx + ' = ' + f1(thisMonth)
+        : attendTx + ' × 予約' + pct(book) + ' × 実施' + pct(R.show) + ' = 面談' + f1(mtgs) + ' → × 成約' + pct(v) + ' = ' + f1(deals) + ' → × 今月入金' + pct(payRate) + lineTx + ' = ' + f1(thisMonth);
       return o;
     });
     var semTotal = seminars.reduce(function (a, s) { return a + s.thisMonth; }, 0);
+    var semIntentE = seminars.reduce(function (a, s) { return a + s.intentE; }, 0);
+    var semIntentN = seminars.reduce(function (a, s) { return a + (s.past && s.intent != null ? s.intent : 0); }, 0);
+    why.semIntent = '勉強会の決済待ち（意思あり・未決済）' + f1(semIntentN) + '人 × ' + pct(intentRate) + ' = ' + f1(semIntentE) + '。決済ずみの人は「入金済み」に入っています';
+
+    var l1 = verbalE + judgeE + upE + reschedE + semIntentE;
+    var l1Low = 0 + judgeE * 0.5 + upLow + reschedE + semIntentE * 0.5;
+    var l1High = (verbalN + loanN) + judgeE * 1.5 + upE + reschedE + semIntentN;
+    why.l1 = '見えている分 = 口頭合意' + f1(verbalE) + ' ＋ 判断待ち' + f1(judgeE) + ' ＋ 面談予定' + f1(upE) + ' ＋ リスケ' + f1(reschedE) + (semIntentN ? ' ＋ 勉強会の決済待ち' + f1(semIntentE) : '') + ' = ' + f1(l1);
+
+    // ---- 層2 これからの新規 ----
 
     // 広告
     var cplTry = num(opts.cplTry);
@@ -340,16 +375,17 @@
       actives.forEach(function (s) {
         var share = allSum > 0 ? s.thisMonth / allSum : 1 / actives.length;
         s.needDeals = gap * share;
-        var perMtg = s.mtgs * s.payRate;
-        s.needRate = perMtg > 0 ? s.needDeals / perMtg : (s.needDeals > 0 ? Infinity : 0);
+        var perUnit = (s.direct ? s.attend : s.mtgs) * s.payRate;   // 直接決済型は参加1人あたり、面談型は面談1件あたり
+        var rateName = s.direct ? '決済率' : '成約率', ceil = s.direct ? DIRECT_CEIL : RATE_CEIL;
+        s.needRate = perUnit > 0 ? s.needDeals / perUnit : (s.needDeals > 0 ? Infinity : 0);
         if (s.needRate <= s.rate) { s.verdict = '届く範囲'; s.verdictKind = 'blue'; }
-        else if (s.needRate <= RATE_CEIL) { s.verdict = '成約率を上げれば'; s.verdictKind = 'lav'; }
+        else if (s.needRate <= ceil) { s.verdict = rateName + 'を上げれば'; s.verdictKind = 'lav'; }
         else {
-          s.verdict = '過去最高75%を超える'; s.verdictKind = 'pink';
-          var per = s.book * R.show * s.rate * s.payRate;
+          s.verdict = s.direct ? '直接決済' + pct(DIRECT_CEIL) + 'を超える' : '過去最高75%を超える'; s.verdictKind = 'pink';
+          var per = (s.direct ? s.rate : s.book * R.show * s.rate) * s.payRate;
           s.needAttend = per > 0 ? Math.ceil(s.needDeals / per) : null;
         }
-        why['semNeed_' + s.id] = '必要 = 足りない分' + f1(gap) + ' × この回の割合' + pct(share) + '（勉強会と広告の見込みの比） = ' + f1(s.needDeals) + '件 → ÷（面談' + f1(s.mtgs) + ' × 今月入金' + pct(s.payRate) + '） = 成約率' + (isFinite(s.needRate) ? pct(s.needRate) : '—') + (s.needAttend ? '。成約率' + pct(s.rate) + 'のままなら参加' + s.needAttend + '人' : '');
+        why['semNeed_' + s.id] = '必要 = 足りない分' + f1(gap) + ' × この回の割合' + pct(share) + '（勉強会と広告の見込みの比） = ' + f1(s.needDeals) + '件 → ÷（' + (s.direct ? '参加' + f1(s.attend) : '面談' + f1(s.mtgs)) + ' × 今月入金' + pct(s.payRate) + '） = ' + rateName + (isFinite(s.needRate) ? pct(s.needRate) : '—') + (s.needAttend ? '。' + rateName + pct(s.rate) + 'のままなら参加' + s.needAttend + '人' : '');
       });
     }
 
@@ -386,13 +422,13 @@
     else {
       var cands = [];
       // 現実的な上積み = 残りの人 ×（1 − 今の率）× 0.5
-      var pipeN = verbalN + loanN + judgeN;
-      var pipeUp = 0.5 * (verbalN * (1 - R.verbal) + loanN * (1 - R.loan) + j7 * (1 - R.judge7) + j21 * (1 - R.judge21) + jOver * (1 - R.judgeOver));
-      cands.push({ k: 'pipe', label: '口頭合意と判断待ち ' + pipeN + '人への個別のお声がけ', x: pipeUp });
+      var pipeN = verbalN + loanN + judgeN + semIntentN;
+      var pipeUp = 0.5 * (verbalN * (1 - R.verbal) + loanN * (1 - R.loan) + j7 * (1 - R.judge7) + j21 * (1 - R.judge21) + jOver * (1 - R.judgeOver) + semIntentN * (1 - intentRate));
+      cands.push({ k: 'pipe', label: '口頭合意と判断待ち ' + pipeN + '人' + (semIntentN ? '（勉強会の決済待ち' + f1(semIntentN) + '人を含む）' : '') + 'への個別のお声がけ', x: pipeUp });
       cands.push({ k: 'upcoming', label: '面談予定の成約率を6割へ', x: upStrong });
       var semUp = 0;
       seminars.forEach(function (s) {
-        if (s.active && s.attendMax != null && s.attendMax > s.attend) semUp += (s.attendMax - s.attend) * s.book * R.show * s.rate * s.payRate;
+        if (s.active && s.attendMax != null && s.attendMax > s.attend) semUp += (s.attendMax - s.attend) * (s.direct ? s.rate : s.book * R.show * s.rate) * s.payRate;
       });
       cands.push({ k: 'seminar', label: '勉強会の参加を直近最大へ', x: semUp });
       var adUp = 0;
@@ -419,7 +455,8 @@
         verbalN: verbalN, loanN: loanN, verbalE: verbalE,
         judge7N: j7, judge21N: j21, judgeOverN: jOver, longN: longN, judgeN: judgeN, judgeE: judgeE,
         upN: ups.length, upLateN: upLateN, upReschN: upReschN, upE: upE,
-        reschedN: reschedN, reschedRecentUsed: reschedRecentUsed, reschedAll: cnt(stat.resched), reschedE: reschedE, total: l1, low: l1Low, high: l1High
+        reschedN: reschedN, reschedRecentUsed: reschedRecentUsed, reschedAll: cnt(stat.resched), reschedE: reschedE,
+        semIntentN: semIntentN, semIntentE: semIntentE, total: l1, low: l1Low, high: l1High
       },
       seminars: seminars, semTotal: semTotal,
       ad: {
@@ -449,6 +486,6 @@
     VERSION: VERSION,
     defaults: defaults, normalize: normalize, compute: compute, makeSnapshot: makeSnapshot, mirrorCash: mirrorCash,
     viaKey: viaKey, fmtMan: fmtMan, fmtYen: fmtYen, fmtMD: fmtMD, f1: f1, pct: pct,
-    RATE_CEIL: RATE_CEIL
+    RATE_CEIL: RATE_CEIL, DIRECT_CEIL: DIRECT_CEIL
   };
 });

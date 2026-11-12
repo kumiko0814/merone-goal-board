@@ -228,5 +228,45 @@ function emptyStat() { return { paidMainCount: 0, paidMainByVia: {}, pipeline: [
   check('個人名-1 結果に name/closer が出ない', !/"name"|"closer"/.test(txt));
 })();
 
+// ⑥ 2026-11-13: 勉強会の経路「広告」（その場で決済）・希望者→参加・開催済みの決済待ち（履歴つき）
+(function () {
+  var D1113 = new Date(2026, 10, 13);
+  var d = E.defaults('2026-11');
+  check('⑥-1 既定に 広告 の勉強会率（direct 22%）・希望者→参加67%・決済待ち35%', d.rates.seminar['広告'] && d.rates.seminar['広告'].direct === 0.22 && d.rates.semAttendRate === 0.67 && d.rates.semIntent === 0.35);
+  var old = { v: 1, ym: '2026-11', rates: { seminar: { famm: { attendMedian: 30 } } }, seminars: [{ id: 'x', alliance: 'famm', date: '2026-11-18', attend: 20 }] };
+  var n = E.normalize(old, '2026-11');
+  check('⑥-2 normalize: 広告の率が補われ famm の上書きは残る', n.rates.seminar['広告'].direct === 0.22 && n.rates.seminar.famm.attendMedian === 30);
+  check('⑥-3 normalize: 勉強会に applied/paid/intent/history がそろう', n.seminars[0].applied === null && n.seminars[0].paid === null && n.seminars[0].intent === null && Array.isArray(n.seminars[0].history) && n.seminars[0].attend === 20, n.seminars[0]);
+  var s1 = E.defaults('2026-11'); s1.seminars = [{ id: 'a', alliance: '広告', date: '2026-11-19', attend: 40 }];
+  var r1 = E.compute(s1, emptyStat(), null, D1113), a1 = r1.seminars[0];
+  check('⑥-4 広告は面談を挟まず direct: 参加40×22%=8.8・今月入金（前半90%）7.92', a1.direct && a1.mtgs === null && near(a1.deals, 8.8) && near(a1.thisMonth, 7.92) && near(r1.semTotal, 7.92), a1);
+  check('⑥-5 広告の式に「直接決済22%」', /直接決済22%/.test(r1.why.sem_a), r1.why.sem_a);
+  var s2 = E.defaults('2026-11'); s2.seminars = [{ id: 'b', alliance: '広告', date: '2026-11-19', applied: 60, attend: null }];
+  var b2 = E.compute(s2, emptyStat(), null, D1113).seminars[0];
+  check('⑥-6 希望者60だけなら 参加=40.2（×67%）・出どころ applied', b2.attendFrom === 'applied' && near(b2.attend, 40.2) && !b2.attendIsMedian, b2);
+  var s3 = E.defaults('2026-11'); s3.seminars = [{ id: 'c', alliance: '広告', date: '2026-11-19' }];
+  var c3 = E.compute(s3, emptyStat(), null, D1113).seminars[0];
+  check('⑥-7 希望者も参加も無ければ中央値40', c3.attendFrom === 'median' && c3.attend === 40 && c3.attendIsMedian);
+  var s4 = E.defaults('2026-11'); s4.seminars = [{ id: 'p', alliance: '広告', date: '2026-11-11', applied: 60, attend: 40, paid: 5, intent: 12, history: [{ at: '2026-11-12 09:00', paid: 4, intent: 12 }] }];
+  var r4 = E.compute(s4, emptyStat(), null, D1113), p4 = r4.seminars[0];
+  check('⑥-8 開催済み: thisMonth 0・意思12×35%=4.2・参加率67%・決済率12.5%', p4.past && p4.thisMonth === 0 && near(p4.intentE, 4.2) && near(p4.attendRateActual, 2 / 3) && near(p4.payRateActual, 0.125), p4);
+  check('⑥-9 見えている分に 勉強会の決済待ち 12人→4.2（決済ずみ5は足さない）', r4.l1.semIntentN === 12 && near(r4.l1.semIntentE, 4.2) && near(r4.l1.total, 4.2) && r4.paid === 0 && near(r4.midRaw, 4.2 + r4.l2), [r4.l1, r4.paid]);
+  check('⑥-10 履歴がそのまま返る', p4.history.length === 1 && p4.history[0].paid === 4);
+  check('⑥-11 why.l1 に 勉強会の決済待ち', /勉強会の決済待ち4.2/.test(r4.why.l1), r4.why.l1);
+  check('⑥-12 上下の幅: 下は半分・上は全員', near(r4.l1.low, 2.1) && near(r4.l1.high, 12), [r4.l1.low, r4.l1.high]);
+  var s5 = E.defaults('2026-11'); s5.seminars = [{ id: 'q', alliance: 'famm', date: '2026-11-05', attend: 30 }];
+  var r5 = E.compute(s5, emptyStat(), null, D1113);
+  check('⑥-13 未入力の開催済みは 0（従来どおり）', r5.l1.semIntentN === 0 && r5.l1.semIntentE === 0 && r5.l1.total === 0);
+  var s6 = nov(function (s) { cash45(s); s.seminars = [{ id: 'd', alliance: '広告', date: '2026-11-19', attend: 40 }]; });
+  var r6 = E.compute(s6, emptyStat(), null, D1113), d6 = r6.seminars[0];
+  check('⑥-14 直接決済型の必要率 = 必要件数 ÷（参加40 × 今月入金90%）・言葉は決済率', d6.needDeals != null && near(d6.needRate, d6.needDeals / 36) && /決済率/.test(r6.why.semNeed_d), [d6.needDeals, d6.needRate]);
+  check('⑥-15 判定の言葉', d6.verdictKind === 'blue' ? d6.verdict === '届く範囲' : /決済/.test(d6.verdict), d6.verdict);
+  var s7 = nov(function (s) { cash45(s); s.seminars.push({ id: 'p2', alliance: '広告', date: '2026-11-11', attend: 40, paid: 5, intent: 12 }); });
+  var r7 = E.compute(s7, MOCK, null, D1113);
+  check('⑥-16 お声がけ候補に 勉強会の決済待ち12人 を含む', /勉強会の決済待ち12人を含む/.test((r7.why.next || '') + r7.nextMove), [r7.nextMove, r7.why.next]);
+  check('⑥-17 広告なしの従来設定では 決済待ち 0', E.compute(nov(), MOCK, null, D1110).l1.semIntentN === 0);
+  check('⑥-18 DIRECT_CEIL 30% を公開', E.DIRECT_CEIL === 0.3);
+})();
+
 console.log('\n' + passes + ' passed, ' + fails + ' failed');
 process.exit(fails ? 1 : 0);
