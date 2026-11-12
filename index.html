@@ -321,6 +321,7 @@ details > summary .st{margin-left:auto; font-size:10.5px; font-weight:800; color
     <button type="submit">ひらく</button>
   </form>
   <div id="pinMsg"></div>
+  <p id="pinHint" style="margin:10px 0 0; color:var(--sub); font-size:11.5px;">毎回PINを聞かれるときは、Safariでこのページを開き、URLの最後に <b>#k=</b> とPINを付けてから「ホーム画面に追加」してください。その印から開く限りPINは要りません。</p>
 </div>
 
 <section>
@@ -424,7 +425,7 @@ details > summary .st{margin-left:auto; font-size:10.5px; font-weight:800; color
 
 <div id="dbg" hidden></div>
 
-<script src="engine.js?v=20261110b"></script>
+<script src="engine.js?v=20261112a"></script>
 <script>
 (function(){
 'use strict';
@@ -437,10 +438,10 @@ var K_PIN='cockpit_pin', K_CACHE=MOCK?'cockpit_cache_v1_mock':'cockpit_cache_v1'
 var MOCK_META = Q.get('meta')==='0' ? { ok:false, error:'token未設定' } : { ok:true, spend:1130000, regs:226, cpl:5000, since:'2026-11-01', until:'2026-11-10', error:'' };
 var SEED={ '2026-11':[
   { id:'s1', alliance:'famm', date:'2026-11-18', attend:null, note:'' },
-  { id:'s2', alliance:'ABCash', date:'2026-11-21', attend:null, note:'' },
+  { id:'s2', alliance:'ABCash', date:'2026-11-22', attend:null, note:'' },
   { id:'s3', alliance:'famm', date:'2026-11-28', attend:null, note:'' } ] };
 var SEED_SNAP={ '2026-11':{ date:'2026-11-01', need:45, low:24, mid:33, high:42, promise:33, note:'月初の原文' } };
-var BUILD = '20261110b'; // engine.js?v= と E.VERSION を同じにする
+var BUILD = '20261112a'; // engine.js?v= と E.VERSION を同じにする
 var E=window.CockpitEngine;
 var memPin='';
 var SECS=['cash','seminars','ads','rates','manual','promiseManual','snapshots','expense'];
@@ -1273,6 +1274,13 @@ function showFatal(html){
 }
 function boot(){
   try{
+    // ホーム画面のリンクに #k=PIN が付いていれば、この端末の記憶が消えていても使う。読み取ったらURLから消す
+    var hk=/[#&]k=([^&]+)/.exec(location.hash||'');
+    if(hk){
+      var kv=''; try{ kv=decodeURIComponent(hk[1]); }catch(e){ kv=hk[1]; }
+      if(kv && !lsGet(K_PIN)){ if(!lsSet(K_PIN, kv)) memPin=kv; }
+      try{ history.replaceState(null, '', location.pathname+location.search); }catch(e){}
+    }
     var td=new Date();
     if(MOCK){ var qt=/^(\d{4})-(\d{2})-(\d{2})$/.exec(Q.get('today')||''); td = qt ? new Date(+qt[1], +qt[2]-1, +qt[3]) : new Date(2026,10,10); }
     st.today=td; st.ym=td.getFullYear()+'-'+pad(td.getMonth()+1);

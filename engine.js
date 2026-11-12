@@ -8,7 +8,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  var VERSION = '20261110b'; // index.html の BUILD と一致させる
+  var VERSION = '20261112a'; // index.html の BUILD と一致させる
   var WD = ['日', '月', '火', '水', '木', '金', '土'];
   var RESCHED_SHOW = 0.10, RESCHED_PAID = 0.45; // 日付なしリスケ（§5 層1）
   var STRONG_RATE = 0.6, RATE_CEIL = 0.75;      // 次の一手の上積み試算・過去最高の成約率
